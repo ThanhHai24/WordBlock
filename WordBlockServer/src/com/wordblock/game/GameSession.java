@@ -7,7 +7,7 @@ public class GameSession {
     private final String roomId, playerA, playerB, letterPool;
     private final long durationMs;
     private final WordValidator validator;
-    private final Set<String> submitted = ConcurrentHashMap.newKeySet();
+    private final Map<String, Set<String>> submittedByPlayer = new ConcurrentHashMap<>();
     private final Map<String,Integer> scores = new ConcurrentHashMap<>();
     private final AtomicBoolean running = new AtomicBoolean(false);
     private long endAt;
@@ -38,10 +38,27 @@ public class GameSession {
     public synchronized boolean submitWord(String user, String word){
         if(!running.get()) return false;
         String w = word.toLowerCase(Locale.ROOT).trim();
-        if(submitted.contains(w)) return false;
-        if(!validator.isValid(w)) return false;
+        int current = scores.getOrDefault(user, 0);
+        
+        submittedByPlayer.putIfAbsent(user, ConcurrentHashMap.newKeySet());
+        Set<String> submitted = submittedByPlayer.get(user);
+        // Nếu từ đã dùng -> trừ điểm
+        // Nếu từ đã dùng bởi chính người đó -> trừ điểm
+        if (submitted.contains(w)) {
+            return false;
+        }
+
+        // Nếu không có trong dictionary -> trừ điểm
+        if (!validator.isValid(w, letterPool)) {   // 🟢 truyền thêm pool của game
+            scores.put(user, current - 1);
+            return false;
+        }
+
+
+
+        // Từ hợp lệ -> lưu và cộng điểm
         submitted.add(w);
-        scores.put(user, scores.getOrDefault(user,0)+5);
+        scores.put(user, current + 5);
         return true;
     }
 

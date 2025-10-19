@@ -80,7 +80,7 @@ public class ClientHandler extends Thread {
 
         if("accept".equalsIgnoreCase(decision)){
             String roomId = "R"+ThreadLocalRandom.current().nextInt(100000,999999);
-            String letters = genLetters();
+            String letters = genLetters(6);
             GameSession session = new GameSession(roomId, from, username, Server.validator, 120_000, letters);
             session.setTickListener(new GameSession.TickListener() {
                 @Override public void onTick(String rid, int secLeft, Map<String,Integer> sc) {
@@ -135,9 +135,42 @@ public class ClientHandler extends Thread {
         try{ socket.close(); } catch(Exception ignore){}
     }
 
-    private static String genLetters(){
-        String alpha="abcdefghijklmnopqrstuvwxyz"; StringBuilder b=new StringBuilder();
-        for(int i=0;i<16;i++) b.append(alpha.charAt(ThreadLocalRandom.current().nextInt(alpha.length())));
-        return b.toString();
+    private static String genLetters(int count) {
+        // Toàn bộ bảng chữ cái
+        String vowels = "aeiou";
+        String consonants = "bcdfghjklmnpqrstvwxyz";
+
+        // Danh sách để chọn ngẫu nhiên
+        List<Character> pool = new ArrayList<>();
+        for (char c : (vowels + consonants).toCharArray()) pool.add(c);
+
+        // Kiểm tra count hợp lệ
+        if (count < 2) count = 2;               // ít nhất 2 ký tự
+        if (count > 26) count = 26;             // không vượt quá bảng chữ cái
+
+        ThreadLocalRandom rand = ThreadLocalRandom.current();
+
+        while (true) {
+            // Tạo danh sách tạm sao chép
+            List<Character> temp = new ArrayList<>(pool);
+            Collections.shuffle(temp, rand);
+
+            // Chọn 'count' chữ cái đầu tiên
+            StringBuilder b = new StringBuilder();
+            for (int i = 0; i < count; i++) b.append(temp.get(i));
+
+            String result = b.toString();
+
+            // ✅ Kiểm tra có ít nhất 1 nguyên âm & 1 phụ âm
+            boolean hasVowel = result.chars().anyMatch(ch -> vowels.indexOf(ch) >= 0);
+            boolean hasConsonant = result.chars().anyMatch(ch -> consonants.indexOf(ch) >= 0);
+
+            if (hasVowel && hasConsonant)
+                return result; // hợp lệ → trả về luôn
+
+            // Nếu không đạt điều kiện → lặp lại (rất nhanh)
+        }
     }
+
+
 }
