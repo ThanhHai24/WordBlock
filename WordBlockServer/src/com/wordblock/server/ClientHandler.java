@@ -30,7 +30,7 @@ public class ClientHandler extends Thread {
                 switch (m.type) {
                     case "register"     -> onRegister(m.payload);
                     case "login"        -> onLogin(m.payload);
-                    case "list_online"  -> sendRaw(Server.gson.toJson(Map.of("type","online_list","payload", Map.of("users", Server.online.keySet()))));
+                    case "list_online"  -> onListOnline();
                     case "invite"       -> onInvite(m.payload);
                     case "invite_reply" -> onInviteReply(m.payload);
                     case "word_submit"  -> onWordSubmit(m.payload);
@@ -95,6 +95,7 @@ public class ClientHandler extends Thread {
                         try {
                             String winner = null, loser = null;
                             int max = Integer.MIN_VALUE;
+                            Server.broadcastOnline();
                             for (var e : finalScores.entrySet()) {
                                 if (e.getValue() > max) {
                                     max = e.getValue();
@@ -187,6 +188,7 @@ public class ClientHandler extends Thread {
         if (count > 26) count = 26;             // không vượt quá bảng chữ cái
 
         ThreadLocalRandom rand = ThreadLocalRandom.current();
+        Server.broadcastOnline();
 
         while (true) {
             // Tạo danh sách tạm sao chép
@@ -259,5 +261,29 @@ public class ClientHandler extends Thread {
             )));
         }
     }
+    private void onListOnline() {
+        try {
+            // Duyệt tất cả người đang online và lấy trạng thái
+            var users = Server.online.entrySet().stream()
+                .map(e -> Map.of(
+                    "name", e.getKey(),
+                    "status", (Server.userRoom.containsKey(e.getKey()) ? "Playing" : "Online")
+                ))
+                .toList();
 
+            // Gửi về client
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "online_list",
+                "payload", Map.of("users", users)
+            )));
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "online_list",
+                "payload", Map.of("users", List.of())
+            )));
+        }
+    }
+
+    
 }

@@ -39,8 +39,27 @@ public class Server {
         });
     }
 
-    static void broadcastOnline(){
-        String json = gson.toJson(Map.of("type","online_list","payload", Map.of("users", online.keySet())));
+    public static void broadcastOnline() {
+    try {
+        // Duyệt qua tất cả người đang online
+        var users = online.entrySet().stream()
+            .map(e -> Map.of(
+                "name", e.getKey(),
+                "status", (userRoom.containsKey(e.getKey()) ? "Playing" : "Online")
+            ))
+            .toList();
+
+        // Gói JSON gửi đi
+        String json = gson.toJson(Map.of(
+            "type", "online_list",
+            "payload", Map.of("users", users)
+        ));
+
+        // Gửi cho tất cả client đang online
         online.values().forEach(h -> h.sendRaw(json));
+    } catch (Exception e) {
+        e.printStackTrace();
     }
+}
+
 }
