@@ -118,7 +118,7 @@ public class ClientHandler extends Thread {
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
-                        }
+                        } 
                     
                     Server.userRoom.entrySet().removeIf(e -> e.getValue().equals(rid));
                 }
