@@ -37,6 +37,8 @@ public class GameFrame extends JFrame {
             String w = tfWord.getText().trim();
             if(!w.isEmpty()){ net.send("word_submit", Map.of("roomId", roomId, "word", w)); tfWord.setText(""); }
         });
+        
+        tfWord.addActionListener(e -> btSend.doClick());
 
         setLayout(new BorderLayout());
         add(north, BorderLayout.NORTH); add(center, BorderLayout.CENTER); add(south, BorderLayout.SOUTH);
