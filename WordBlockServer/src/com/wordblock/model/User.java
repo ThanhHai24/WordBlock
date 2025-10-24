@@ -7,6 +7,10 @@ public class User {
     public int getId(){return id;} public void setId(int v){id=v;}
     public String getUsername(){return username;} public void setUsername(String v){username=v;}
     public String getPasswordHash(){return passwordHash;} public void setPasswordHash(String v){passwordHash=v;}
-    public int getTotalPoints(){return totalPoints;} public void setTotalPoints(int v){totalPoints=v;}
     public String getStatus(){return status;} public void setStatus(String v){status=v;}
+
+    public int getTotalPoints() { return totalPoints; }
+    public void setTotalPoints(int totalPoints) { this.totalPoints = totalPoints; }
+
+    
 }

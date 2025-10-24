@@ -35,6 +35,8 @@ public class ClientHandler extends Thread {
                     case "invite_reply" -> onInviteReply(m.payload);
                     case "word_submit"  -> onWordSubmit(m.payload);
                     case "logout"       -> onLogout();
+                    case "leave_game"   -> onLeaveGame();
+                    case "leaderboard_request" -> onLeaderboardRequest();
                     default             -> sendRaw(Server.gson.toJson(Map.of("type","error","payload",Map.of("message","Unknown type"))));
                 }
             }
@@ -80,7 +82,7 @@ public class ClientHandler extends Thread {
 
         if("accept".equalsIgnoreCase(decision)){
             String roomId = "R"+ThreadLocalRandom.current().nextInt(100000,999999);
-            String letters = genLetters(6);
+            String letters = genLetters(8);
             GameSession session = new GameSession(roomId, from, username, Server.validator, 120_000, letters);
             session.setTickListener(new GameSession.TickListener() {
                 @Override public void onTick(String rid, int secLeft, Map<String,Integer> sc) {
@@ -90,6 +92,33 @@ public class ClientHandler extends Thread {
                     Server.broadcastToRoom(rid, Map.of("type","game_end","payload", Map.of("roomId", rid, "scores", finalScores)));
                     Server.rooms.remove(rid);
                     // clear user->room
+                        try {
+                            String winner = null, loser = null;
+                            int max = Integer.MIN_VALUE;
+                            for (var e : finalScores.entrySet()) {
+                                if (e.getValue() > max) {
+                                    max = e.getValue();
+                                    winner = e.getKey();
+                                }
+                            }
+                            for (var e : finalScores.entrySet()) {
+                                if (!e.getKey().equals(winner)) loser = e.getKey();
+                            }
+
+                            if (winner != null) {
+                                UserDAO dao = Server.userDAO;
+                                User w = dao.findByUsername(winner);
+                                if (w != null) dao.addPoints(w.getId(), 5);
+                            }
+                            if (loser != null) {
+                                UserDAO dao = Server.userDAO;
+                                User l = dao.findByUsername(loser);
+                                if (l != null) dao.addPoints(l.getId(), -3);
+                            }
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    
                     Server.userRoom.entrySet().removeIf(e -> e.getValue().equals(rid));
                 }
             });
@@ -128,7 +157,16 @@ public class ClientHandler extends Thread {
                 Server.online.remove(username);
                 try{ UserDAO udao=Server.userDAO; User u=udao.findByUsername(username); if(u!=null) udao.setStatus(u.getId(),"OFFLINE"); } catch(Exception ignore){}
                 String rid = Server.userRoom.remove(username);
-                if(rid!=null){ var s=Server.rooms.get(rid); if(s!=null && s.isRunning()) s.stop(); }
+                if (rid != null) {
+                    var s = Server.rooms.get(rid);
+                    if (s != null && s.isRunning()) {
+                        // 🟢 Gán điểm thua cho người chơi thoát
+                        s.setPlayerScore(username, -999);
+
+                        // 🟢 Dừng trận (gửi game_end cho đối thủ)
+                        s.stop();
+                    }
+                }
                 Server.broadcastOnline();
             }
         } catch(Exception ignore){}
@@ -171,6 +209,55 @@ public class ClientHandler extends Thread {
             // Nếu không đạt điều kiện → lặp lại (rất nhanh)
         }
     }
+    
+    private void onLeaveGame() {
+        try {
+            String rid = Server.userRoom.remove(username);
+            if (rid != null) {
+                var session = Server.rooms.get(rid);
+                if (session != null && session.isRunning()) {
+                    session.setPlayerScore(username, -999);
+                    session.stop(); // Dừng trận, gửi game_end cho đối thủ
+                }
+            }
 
+            // Gửi xác nhận lại cho client đã thoát
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "leave_result",
+                "payload", Map.of("success", true)
+            )));
+
+            // Cập nhật danh sách người chơi online
+            Server.broadcastOnline();
+
+            System.out.println("[INFO] Player " + username + " left the game manually (score set to -999).");
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "leave_result",
+                "payload", Map.of("success", false)
+            )));
+        }
+    }
+    private void onLeaderboardRequest() {
+        try {
+            var list = Server.userDAO.getLeaderboard(10); // Top 10
+            var data = list.stream().map(u -> Map.of(
+                "username", u.getUsername(),
+                "points", u.getTotalPoints()
+            )).toList();
+
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "leaderboard_result",
+                "payload", Map.of("leaderboard", data)
+            )));
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "leaderboard_result",
+                "payload", Map.of("leaderboard", List.of())
+            )));
+        }
+    }
 
 }

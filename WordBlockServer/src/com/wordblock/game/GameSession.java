@@ -69,4 +69,10 @@ public class GameSession {
         if(ses!=null) ses.shutdownNow();
         if(tickListener!=null) tickListener.onEnd(roomId, new HashMap<>(scores));
     }
+    
+    public synchronized void setPlayerScore(String player, int score) {
+        if (scores.containsKey(player)) {
+            scores.put(player, score);
+        }
+    }
 }

@@ -3,6 +3,8 @@ import com.wordblock.model.User;
 import com.wordblock.util.DBUtil;
 import org.mindrot.jbcrypt.BCrypt;
 import java.sql.*;
+import java.util.ArrayList;
+import java.util.List;
 
 public class UserDAOImpl implements UserDAO {
     @Override
@@ -67,4 +69,24 @@ public class UserDAOImpl implements UserDAO {
             ps.setInt(1,delta); ps.setInt(2,userId); ps.executeUpdate();
         }
     }
+    @Override
+    public List<User> getLeaderboard(int limit) throws Exception {
+        String sql = "SELECT id, username, total_points FROM users ORDER BY total_points DESC LIMIT ?";
+        List<User> list = new ArrayList<>();
+        try (Connection c = DBUtil.getConnection();
+             PreparedStatement ps = c.prepareStatement(sql)) {
+            ps.setInt(1, limit);
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    User u = new User();
+                    u.setId(rs.getInt("id"));
+                    u.setUsername(rs.getString("username"));
+                    u.setTotalPoints(rs.getInt("total_points"));
+                    list.add(u);
+                }
+            }
+        }
+        return list;
+    }
+
 }
