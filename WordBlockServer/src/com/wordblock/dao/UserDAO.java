@@ -9,4 +9,5 @@ public interface UserDAO {
     User findByUsername(String username) throws Exception;
     void setStatus(int userId, String status) throws Exception;
     void addPoints(int userId, int delta) throws Exception;
+    boolean changePassword(String username, String oldPassword, String newPassword) throws Exception;
 }

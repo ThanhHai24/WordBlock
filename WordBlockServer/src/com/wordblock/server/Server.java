@@ -19,6 +19,7 @@ public class Server {
 
     static final UserDAO userDAO = new UserDAOImpl();
     static final WordDAO wordDAO = new WordDAOImpl();
+    public static MatchDAO matchDAO = new MatchDAOImpl();
     static final WordValidator validator = new WordValidator(wordDAO);
     static final Gson gson = new Gson();
 

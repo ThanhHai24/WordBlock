@@ -3,10 +3,12 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-            <file>file:/C:/Users/nthan/Documents/NetBeansProjects/WordBlockServer/src/com/wordblock/game/GameSession.java</file>
-            <file>file:/C:/Users/nthan/Documents/NetBeansProjects/WordBlockServer/src/com/wordblock/server/ClientHandler.java</file>
-            <file>file:/C:/Users/nthan/Documents/NetBeansProjects/WordBlockServer/src/com/wordblock/game/WordValidator.java</file>
-            <file>file:/C:/Users/nthan/Documents/NetBeansProjects/WordBlockServer/src/com/wordblock/dao/WordDAOImpl.java</file>
+            <file>file:/E:/TEst/WordBlock/WordBlockServer/src/com/wordblock/server/ClientHandler.java</file>
+            <file>file:/E:/TEst/WordBlock/WordBlockServer/src/com/wordblock/dao/UserDAOImpl.java</file>
+            <file>file:/E:/TEst/WordBlock/WordBlockServer/src/com/wordblock/dao/UserDAO.java</file>
+            <file>file:/E:/TEst/WordBlock/WordBlockServer/src/com/wordblock/dao/MatchDAO.java</file>
+            <file>file:/E:/TEst/WordBlock/WordBlockServer/src/com/wordblock/dao/MatchDAOImpl.java</file>
+            <file>file:/E:/TEst/WordBlock/WordBlockServer/src/com/wordblock/server/Server.java</file>
         </group>
     </open-files>
 </project-private>

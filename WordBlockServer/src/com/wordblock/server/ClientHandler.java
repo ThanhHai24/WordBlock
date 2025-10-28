@@ -4,6 +4,7 @@ import com.google.gson.*;
 import com.wordblock.dao.*;
 import com.wordblock.game.GameSession;
 import com.wordblock.model.User;
+import static com.wordblock.server.Server.userDAO;
 
 import java.io.*;
 import java.net.Socket;
@@ -34,9 +35,11 @@ public class ClientHandler extends Thread {
                     case "invite"       -> onInvite(m.payload);
                     case "invite_reply" -> onInviteReply(m.payload);
                     case "word_submit"  -> onWordSubmit(m.payload);
+                    case "change_password" -> handleChangePassword(m.payload);
                     case "logout"       -> onLogout();
                     case "leave_game"   -> onLeaveGame();
                     case "leaderboard_request" -> onLeaderboardRequest();
+                    case "match_history" -> onMatchHistory();
                     default             -> sendRaw(Server.gson.toJson(Map.of("type","error","payload",Map.of("message","Unknown type"))));
                 }
             }
@@ -115,6 +118,20 @@ public class ClientHandler extends Thread {
                                 UserDAO dao = Server.userDAO;
                                 User l = dao.findByUsername(loser);
                                 if (l != null) dao.addPoints(l.getId(), -3);
+                            }
+                            if (winner != null && loser != null) {
+                                UserDAO dao = Server.userDAO;
+                                User p1 = dao.findByUsername(winner);
+                                User p2 = dao.findByUsername(loser);
+
+                                if (p1 != null && p2 != null) {
+                                    int s1 = finalScores.getOrDefault(winner, 0);
+                                    int s2 = finalScores.getOrDefault(loser, 0);
+
+                                    // gọi DAO để lưu vào bảng matches
+                                    Server.matchDAO.saveMatch(p1.getId(), p2.getId(), s1, s2);
+                                    System.out.printf("[DB] Lưu trận: %s (%d) vs %s (%d)%n", winner, s1, loser, s2);
+                                }
                             }
                         } catch (Exception e) {
                             e.printStackTrace();
@@ -281,6 +298,80 @@ public class ClientHandler extends Thread {
             sendRaw(Server.gson.toJson(Map.of(
                 "type", "online_list",
                 "payload", Map.of("users", List.of())
+            )));
+        }
+    }
+    private void handleChangePassword(JsonObject payload) {
+        try {
+            String oldPass = payload.get("old_password").getAsString();
+            String newPass = payload.get("new_password").getAsString();
+
+            boolean success;
+            String message;
+
+            if (username == null) {
+                success = false;
+                message = "Bạn chưa đăng nhập.";
+            } else {
+                success = userDAO.changePassword(username, oldPass, newPass);
+                message = success ? "Đổi mật khẩu thành công." : "Mật khẩu cũ không đúng.";
+            }
+
+            JsonObject resPayload = new JsonObject();
+            resPayload.addProperty("success", success);
+            resPayload.addProperty("message", message);
+
+            JsonObject response = new JsonObject();
+            response.addProperty("type", "change_password_result");
+            response.add("payload", resPayload);
+
+            // ✅ Gửi theo kiểu bạn đang dùng
+            sendRaw(Server.gson.toJson(response));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+
+            JsonObject resPayload = new JsonObject();
+            resPayload.addProperty("success", false);
+            resPayload.addProperty("message", "Lỗi xử lý yêu cầu đổi mật khẩu.");
+
+            JsonObject response = new JsonObject();
+            response.addProperty("type", "change_password_result");
+            response.add("payload", resPayload);
+
+            sendRaw(Server.gson.toJson(response));
+        }
+    }
+    private void onMatchHistory() {
+        try {
+            if (username == null) {
+                sendRaw(Server.gson.toJson(Map.of(
+                    "type", "match_history_result",
+                    "payload", Map.of("success", false, "message", "Bạn chưa đăng nhập")
+                )));
+                return;
+            }
+
+            User u = Server.userDAO.findByUsername(username);
+            if (u == null) {
+                sendRaw(Server.gson.toJson(Map.of(
+                    "type", "match_history_result",
+                    "payload", Map.of("success", false, "message", "Không tìm thấy người dùng")
+                )));
+                return;
+            }
+
+            var matches = Server.matchDAO.getMatchesForUser(u.getId());
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "match_history_result",
+                "payload", Map.of("success", true, "matches", matches)
+            )));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "match_history_result",
+                "payload", Map.of("success", false, "message", "Lỗi truy vấn lịch sử đấu")
             )));
         }
     }

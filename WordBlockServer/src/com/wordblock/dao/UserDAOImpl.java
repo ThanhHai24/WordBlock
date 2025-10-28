@@ -88,5 +88,37 @@ public class UserDAOImpl implements UserDAO {
         }
         return list;
     }
+    
+    @Override
+    public boolean changePassword(String username, String oldPassword, String newPassword) {
+        String sqlSelect = "SELECT password_hash FROM users WHERE username=?";
+        String sqlUpdate = "UPDATE users SET password_hash=? WHERE username=?";
+
+        try (Connection c = DBUtil.getConnection();
+             PreparedStatement psSelect = c.prepareStatement(sqlSelect)) {
+
+            psSelect.setString(1, username);
+            try (ResultSet rs = psSelect.executeQuery()) {
+                if (rs.next()) {
+                    String currentHash = rs.getString("password_hash");
+
+                    if (BCrypt.checkpw(oldPassword, currentHash)) {
+                        String newHash = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+
+                        try (PreparedStatement psUpdate = c.prepareStatement(sqlUpdate)) {
+                            psUpdate.setString(1, newHash);
+                            psUpdate.setString(2, username);
+                            int updated = psUpdate.executeUpdate();
+                            return updated > 0;
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
 
 }
