@@ -49,25 +49,93 @@ public class ClientHandler extends Thread {
 
     void sendRaw(String json){ out.println(json); }
 
-    private void onRegister(JsonObject p){
+    private void onRegister(JsonObject p) {
         try {
-            boolean ok = Server.userDAO.register(new User(p.get("username").getAsString(), p.get("password").getAsString()));
-            sendRaw(Server.gson.toJson(Map.of("type","register_result","payload", Map.of("success", ok))));
-        } catch (Exception e){ e.printStackTrace(); sendRaw(Server.gson.toJson(Map.of("type","register_result","payload", Map.of("success", false)))); }
+            String username = p.get("username").getAsString();
+            String password = p.get("password").getAsString();
+
+            boolean ok = Server.userDAO.register(new User(username, password));
+
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "register_result",
+                "payload", Map.of("success", ok)
+            )));
+
+            // ✅ Ghi log ra console
+            System.out.println("[REGISTER] " + username + " → " + (ok ? "Register Success" : "Register Failed"));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "register_result",
+                "payload", Map.of("success", false)
+            )));
+        }
     }
 
-    private void onLogin(JsonObject p){
+
+    private void onLogin(JsonObject p) {
         try {
-            String u=p.get("username").getAsString(); String pw=p.get("password").getAsString();
-            User user = Server.userDAO.login(u,pw);
-            if(user!=null){
-                username=u; Server.online.put(u,this);
-                Server.userDAO.setStatus(user.getId(),"ONLINE");
-                sendRaw(Server.gson.toJson(Map.of("type","login_result","payload", Map.of("success",true,"username",u))));
+            String u = p.get("username").getAsString();
+            String pw = p.get("password").getAsString();
+
+            // 🔹 Nếu đã có client dùng tài khoản này
+            if (Server.online.containsKey(u)) {
+                sendRaw(Server.gson.toJson(Map.of(
+                    "type", "login_result",
+                    "payload", Map.of(
+                        "success", false,
+                        "message", "This account already logged in."
+                    )
+                )));
+                return;
+            }
+
+            // 🔹 Kiểm tra thông tin đăng nhập
+            User user = Server.userDAO.login(u, pw);
+
+            if (user != null) {
+                // ✅ Đăng nhập thành công
+                username = u;
+                Server.online.put(u, this);
+                Server.userDAO.setStatus(user.getId(), "ONLINE");
+
+                sendRaw(Server.gson.toJson(Map.of(
+                    "type", "login_result",
+                    "payload", Map.of(
+                        "success", true,
+                        "username", u,
+                        "message", "Đăng nhập thành công."
+                    )
+                )));
+
+                // Gửi danh sách người chơi online cập nhật
                 Server.broadcastOnline();
-            } else sendRaw(Server.gson.toJson(Map.of("type","login_result","payload", Map.of("success",false))));
-        } catch (Exception e){ e.printStackTrace(); sendRaw(Server.gson.toJson(Map.of("type","login_result","payload", Map.of("success",false)))); }
+
+                System.out.println("[LOGIN] " + u + " Login Success From: " + socket.getRemoteSocketAddress());
+            } else {
+                // ❌ Sai thông tin
+                sendRaw(Server.gson.toJson(Map.of(
+                    "type", "login_result",
+                    "payload", Map.of(
+                        "success", false,
+                        "message", "Invalid username or password."
+                    )
+                )));
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "login_result",
+                "payload", Map.of(
+                    "success", false,
+                    "message", "Login ERROR."
+                )
+            )));
+        }
     }
+
 
     private void onInvite(JsonObject p){
         String to=p.get("to").getAsString();
