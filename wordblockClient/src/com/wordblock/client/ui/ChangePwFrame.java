@@ -20,14 +20,16 @@ import java.util.Map;
 
 public class ChangePwFrame extends JFrame {
     private final NetworkClient net;
+    private final String username;
     private final JTextField tfOld = new JPasswordField();
     private final JTextField tfNew = new JPasswordField();
     private final JTextField tfConfirm = new JPasswordField();
     private final JButton btnSubmit = new JButton("Change Password");
     private final JLabel lbMsg = new JLabel(" ", SwingConstants.CENTER);
 
-    public ChangePwFrame(NetworkClient net) {
+    public ChangePwFrame(NetworkClient net, String username) {
         this.net = net;
+        this.username = username;
         setTitle("Change Password");
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(400, 300);
@@ -102,6 +104,14 @@ public class ChangePwFrame extends JFrame {
         lbMsg.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         lbMsg.setForeground(new Color(100, 100, 100));
         panel.add(lbMsg, gbc);
+        
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                dispose();
+                new LobbyFrame(net, username).setVisible(true);
+            }
+        });
 
         add(panel);
     }

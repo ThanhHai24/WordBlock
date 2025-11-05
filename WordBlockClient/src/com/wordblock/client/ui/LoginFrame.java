@@ -17,8 +17,8 @@ public class LoginFrame extends JFrame {
         super("WordBlock – Login");
 
         // Kết nối tới server
-//        net = new NetworkClient("172.11.76.61", 5000);
-        net = new NetworkClient("localhost", 5000);
+        net = new NetworkClient("172.11.151.215", 5000);
+//        net = new NetworkClient("localhost", 5000);
         boolean ok = net.connect();
         if (!ok) {
             JOptionPane.showMessageDialog(

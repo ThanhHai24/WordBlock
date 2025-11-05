@@ -108,7 +108,10 @@ public class LobbyFrame extends JFrame {
             }
         });
 
-        btnChangePass.addActionListener(e -> new ChangePwFrame(net).setVisible(true));
+        btnChangePass.addActionListener(e -> {
+            new ChangePwFrame(net, username).setVisible(true);
+            dispose();
+        });
 
         btnHistory.addActionListener(e -> net.send(Map.of("type", "match_history", "payload", Map.of())));
 

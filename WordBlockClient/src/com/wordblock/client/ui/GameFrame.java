@@ -5,7 +5,7 @@ import com.wordblock.client.net.NetworkClient;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
+import java.awt.event.*;
 import java.util.Map;
 import java.util.Timer;
 
@@ -46,7 +46,7 @@ public class GameFrame extends JFrame {
         setSize(800, 500);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
-        addWindowListener(new java.awt.event.WindowAdapter() {
+        addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
                 onExit();
@@ -254,17 +254,10 @@ public class GameFrame extends JFrame {
         JButton btnYes = new JButton("Play Again");
         JButton btnNo = new JButton("Leave");
 
-        btnYes.addActionListener(e -> {
-            net.send("rematch_response", Map.of("roomId", roomId, "accept", true));
-            btnYes.setEnabled(false);
-            lbl.setText("<html><center>⏳ Waiting for opponent...</center></html>");
-        });
-
-        btnNo.addActionListener(e -> {
+        Runnable leaveAction = () -> {
             net.send("rematch_response", Map.of("roomId", roomId, "accept", false));
-            lbl.setText("<html><center>❌ You rejected to play again.<br>Returning to lobby...</center></html>");
-            Timer t = new Timer();
-            t.schedule(new java.util.TimerTask() {
+            lbl.setText("<html><center>❌ You left the game.<br>Returning to lobby...</center></html>");
+            new java.util.Timer().schedule(new java.util.TimerTask() {
                 @Override
                 public void run() {
                     SwingUtilities.invokeLater(() -> {
@@ -274,8 +267,23 @@ public class GameFrame extends JFrame {
                     });
                 }
             }, 1500);
+        };
+        
+        btnYes.addActionListener(e -> {
+            net.send("rematch_response", Map.of("roomId", roomId, "accept", true));
+            btnYes.setEnabled(false);
+            lbl.setText("<html><center>⏳ Waiting for opponent...</center></html>");
         });
 
+        btnNo.addActionListener(e -> leaveAction.run());
+
+        rematchDialog.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosing(WindowEvent e) {
+                leaveAction.run();
+            }
+        });
+        
         btnPanel.add(btnYes);
         btnPanel.add(btnNo);
         rematchDialog.add(btnPanel, BorderLayout.SOUTH);

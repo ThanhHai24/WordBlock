@@ -141,13 +141,72 @@ public class ClientHandler extends Thread {
     }
 
 
-    private void onInvite(JsonObject p){
-        String to=p.get("to").getAsString();
-        if(username==null || !Server.online.containsKey(to)){ sendRaw(Server.gson.toJson(Map.of("type","invite_result","payload", Map.of("success",false,"message","Target offline")))); return; }
+    private void onInvite(JsonObject p) {
+        String to = p.get("to").getAsString();
+
+        // 🛑 Check if sender is logged in
+        if (username == null) {
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "invite_result",
+                "payload", Map.of("success", false, "message", "You must be logged in to send an invite.")
+            )));
+            return;
+        }
+
+        // 🛑 Check if target user is online
+        if (!Server.online.containsKey(to)) {
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "invite_result",
+                "payload", Map.of("success", false, "message", "Target player is not online.")
+            )));
+            return;
+        }
+
+        // 🛑 Prevent inviting yourself
+        if (to.equals(username)) {
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "invite_result",
+                "payload", Map.of("success", false, "message", "You cannot invite yourself.")
+            )));
+            return;
+        }
+
+        // 🛑 Check if the inviter (sender) is currently in a match
+        if (Server.userRoom.containsKey(username)) {
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "invite_result",
+                "payload", Map.of("success", false, "message", "You cannot send an invite while in a match.")
+            )));
+            return;
+        }
+
+        // 🛑 Check if the target player is currently in a match
+        if (Server.userRoom.containsKey(to)) {
+            sendRaw(Server.gson.toJson(Map.of(
+                "type", "invite_result",
+                "payload", Map.of("success", false, "message", "Target player is currently in another match.")
+            )));
+            return;
+        }
+
+        // ✅ Store pending invite
         Server.pendingInvites.put(to, username);
-        Server.online.get(to).sendRaw(Server.gson.toJson(Map.of("type","invite_received","payload", Map.of("from",username))));
-        sendRaw(Server.gson.toJson(Map.of("type","invite_result","payload", Map.of("success",true))));
+
+        // ✅ Notify the target player
+        Server.online.get(to).sendRaw(Server.gson.toJson(Map.of(
+            "type", "invite_received",
+            "payload", Map.of("from", username)
+        )));
+
+        // ✅ Notify the sender that invite was sent successfully
+        sendRaw(Server.gson.toJson(Map.of(
+            "type", "invite_result",
+            "payload", Map.of("success", true, "message", "Invite sent to " + to + ".")
+        )));
+
+        System.out.printf("[INVITE] %s invited %s to play.%n", username, to);
     }
+
 
     private void onInviteReply(JsonObject p){
         String decision=p.get("decision").getAsString(); String from = Server.pendingInvites.getOrDefault(username,null);
@@ -202,7 +261,7 @@ public class ClientHandler extends Thread {
 
                                     // gọi DAO để lưu vào bảng matches
                                     Server.matchDAO.saveMatch(p1.getId(), p2.getId(), s1, s2);
-                                    System.out.printf("[DB] Lưu trận: %s (%d) vs %s (%d)%n", winner, s1, loser, s2);
+                                    System.out.printf("[DB] Save Match: %s (%d) vs %s (%d)%n", winner, s1, loser, s2);
                                 }
                             }
                         } catch (Exception e) {
