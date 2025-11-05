@@ -17,8 +17,8 @@ public class ClientHandler extends Thread {
     private PrintWriter out; private BufferedReader in;
     private String username = null;
     
-    private static final int GAME_DURATION_MS = 10_000;
-
+    private static final int GAME_DURATION_MS = 120_000;
+    
     private static class Msg { String type; JsonObject payload; }
 
     public ClientHandler(Socket s){ this.socket=s; }
@@ -417,7 +417,7 @@ public class ClientHandler extends Thread {
 
     private void onLeaderboardRequest() {
         try {
-            var list = Server.userDAO.getLeaderboard(10); // Top 10
+            var list = Server.userDAO.getLeaderboard(20); // Top 10
             var data = list.stream().map(u -> Map.of(
                 "username", u.getUsername(),
                 "points", u.getTotalPoints()
@@ -437,23 +437,37 @@ public class ClientHandler extends Thread {
     }
     private void onListOnline() {
         try {
-            // Duyệt tất cả người đang online và lấy trạng thái
             var users = Server.online.entrySet().stream()
-                .map(e -> Map.of(
-                    "name", e.getKey(),
-                    "status", (Server.userRoom.containsKey(e.getKey()) ? "Playing" : "Online")
-                ))
+                .map(e -> {
+                    String username = e.getKey();
+                    String status = Server.userRoom.containsKey(username) ? "Playing" : "Online";
+
+                    int points = 0;
+                    try {
+                        User u = Server.userDAO.findByUsername(username);
+                        if (u != null) points = u.getTotalPoints();
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+
+                    return Map.of(
+                        "name", username,
+                        "status", status,
+                        "points", points
+                    );
+                })
                 .toList();
 
-            // Gửi về client
             sendRaw(Server.gson.toJson(Map.of(
                 "type", "online_list",
                 "payload", Map.of("users", users)
             )));
-            System.out.println(Server.gson.toJson(Map.of(
+
+            System.out.println("[ONLINE_LIST] " + Server.gson.toJson(Map.of(
                 "type", "online_list",
                 "payload", Map.of("users", users)
             )));
+
         } catch (Exception e) {
             e.printStackTrace();
             sendRaw(Server.gson.toJson(Map.of(
@@ -462,6 +476,7 @@ public class ClientHandler extends Thread {
             )));
         }
     }
+
     private void handleChangePassword(JsonObject payload) {
         try {
             String oldPass = payload.get("old_password").getAsString();

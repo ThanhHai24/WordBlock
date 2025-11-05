@@ -162,12 +162,13 @@ public class LobbyFrame extends JFrame {
                             JsonObject u = el.getAsJsonObject();
                             String name = u.get("name").getAsString();
                             String status = u.get("status").getAsString();
-                            String display = switch (status) {
-                                case "Playing" -> name + " (🎮 Playing)";
-                                case "Online" -> name + " (🟢 Online)";
-                                case "Offline" -> name + " (⚫ Offline)";
-                                default -> name + " (" + status + ")";
+                            int points = u.get("points").getAsInt();
+                            String displayStatus = switch (status) {
+                                case "Playing" -> " (🎮 Playing)";
+                                case "Online" -> " (🟢 Online)";
+                                default ->" (" + status + ")";
                             };
+                            String display = String.format("%s%s - %d pts", name, displayStatus, points);
                             onlineModel.addElement(display);
                         }
                     }
