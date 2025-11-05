@@ -29,6 +29,10 @@ public class GameFrame extends JFrame {
     private String letters;
     private int scoreMe = 0;
     private int scoreOp = 0;
+    
+    // --- Rematch state ---
+    private boolean rematchDialogShown = false;
+    private JDialog rematchDialog = null;
 
     public GameFrame(NetworkClient net, String me, String opponent, String roomId, String letters, int durationSec) {
         this.net = net;
@@ -167,10 +171,26 @@ public class GameFrame extends JFrame {
                     case "game_end" -> {
                         if (!roomId.equals(p.get("roomId").getAsString())) return;
                         updateScores(p.getAsJsonObject("scores"));
-                        String winner = pickWinner();
-                        JOptionPane.showMessageDialog(this, "🎮 Game Over!\nWinner: " + winner);
-                        new LobbyFrame(net, me);
-                        dispose();
+                        boolean endedByLeave = p.has("endedByLeave") && p.get("endedByLeave").getAsBoolean();
+                        if (endedByLeave) {
+                            updateScores(p.getAsJsonObject("scores"));
+                            String winner = pickWinner();
+                            JOptionPane.showMessageDialog(this,
+                                    "🎮 Game Over!\nOpponent Left!.\nWinner: " + winner,
+                                    "Game Ended", JOptionPane.INFORMATION_MESSAGE);
+                            new LobbyFrame(net, me);
+                            dispose();
+                        } else {
+                            showRematchDialog();
+                        }
+                    }
+
+                    case "rematch_offer" -> {
+                        if (!rematchDialogShown) showRematchDialog();
+                    }
+
+                    case "rematch_update", "rematch_cancelled", "rematch_start" -> {
+                        handleRematchMessage(type, p);
                     }
                 }
             } catch (Exception ex) {
@@ -215,4 +235,146 @@ public class GameFrame extends JFrame {
             dispose();
         }
     }
+    /** ====================== REMATCH HANDLING ====================== */
+    private void showRematchDialog() {
+        rematchDialogShown = true;
+        updateScoresFromLabels();
+
+        String winner = pickWinner();
+        rematchDialog = new JDialog(this, "Game End!", true);
+        rematchDialog.setLayout(new BorderLayout(10, 10));
+        rematchDialog.setSize(320, 220);
+        rematchDialog.setLocationRelativeTo(this);
+
+        JLabel lbl = new JLabel("<html><center>🎮 Game End!!<br>Winner: <b>"
+                + winner + "</b><br><br>Do you want to play again?</center></html>", SwingConstants.CENTER);
+        rematchDialog.add(lbl, BorderLayout.CENTER);
+
+        JPanel btnPanel = new JPanel();
+        JButton btnYes = new JButton("Play Again");
+        JButton btnNo = new JButton("Leave");
+
+        btnYes.addActionListener(e -> {
+            net.send("rematch_response", Map.of("roomId", roomId, "accept", true));
+            btnYes.setEnabled(false);
+            lbl.setText("<html><center>⏳ Waiting for opponent...</center></html>");
+        });
+
+        btnNo.addActionListener(e -> {
+            net.send("rematch_response", Map.of("roomId", roomId, "accept", false));
+            lbl.setText("<html><center>❌ You rejected to play again.<br>Returning to lobby...</center></html>");
+            Timer t = new Timer();
+            t.schedule(new java.util.TimerTask() {
+                @Override
+                public void run() {
+                    SwingUtilities.invokeLater(() -> {
+                        rematchDialog.dispose();
+                        new LobbyFrame(net, me);
+                        dispose();
+                    });
+                }
+            }, 1500);
+        });
+
+        btnPanel.add(btnYes);
+        btnPanel.add(btnNo);
+        rematchDialog.add(btnPanel, BorderLayout.SOUTH);
+
+        rematchDialog.setVisible(true);
+    }
+
+    private void handleRematchMessage(String type, JsonObject p) {
+        switch (type) {
+            case "rematch_update" -> {
+                String user = p.get("user").getAsString();
+                boolean accept = p.get("accept").getAsBoolean();
+
+                if (rematchDialog != null && rematchDialog.isVisible()) {
+                    Component[] comps = rematchDialog.getContentPane().getComponents();
+                    JLabel lbl = null;
+                    for (Component c : comps)
+                        if (c instanceof JLabel) lbl = (JLabel) c;
+
+                    if (lbl != null) {
+                        if (accept) {
+                            lbl.setText("<html><center>🤝 " + user + " accepted.<br>Waitting for your choice...</center></html>");
+                        } else {
+                            lbl.setText("<html><center>❌ " + user + " rejected.<br>Game End.<br>Winner: <b>"
+                                    + pickWinner() + "</b></center></html>");
+                        }
+                    }
+
+                    // Ẩn nút "Chơi lại" nếu đối thủ từ chối
+                    if (!accept) {
+                        for (Component c : ((JPanel) rematchDialog.getContentPane().getComponent(1)).getComponents()) {
+                            if (c instanceof JButton btn && btn.getText().equals("Play Again")) {
+                                btn.setEnabled(false);
+                                btn.setVisible(false);
+                            }
+                        }
+                    }
+                    rematchDialog.revalidate();
+                    rematchDialog.repaint();
+                }
+            }
+
+            case "rematch_cancelled" -> {
+                if (rematchDialog != null && rematchDialog.isVisible()) {
+                    // Giữ lại popup nhưng cập nhật nội dung thay vì đóng
+                    Component[] comps = rematchDialog.getContentPane().getComponents();
+                    JLabel lbl = null;
+                    for (Component c : comps)
+                        if (c instanceof JLabel) lbl = (JLabel) c;
+                    if (lbl != null) {
+                        lbl.setText("<html><center>❌ Opponent left or rejected.<br>Game End!.<br>Winner: <b>"
+                                + pickWinner() + "</b></center></html>");
+                    }
+
+                    // Ẩn các nút để chỉ hiển thị kết quả
+                    JPanel panel = (JPanel) rematchDialog.getContentPane().getComponent(1);
+                    for (Component c : panel.getComponents()) {
+                        if (c instanceof JButton) c.setVisible(false);
+                    }
+
+                    // Tự quay về sảnh sau 2 giây
+                    Timer t = new Timer();
+                    t.schedule(new java.util.TimerTask() {
+                        @Override
+                        public void run() {
+                            SwingUtilities.invokeLater(() -> {
+                                rematchDialog.dispose();
+                                new LobbyFrame(net, me);
+                                dispose();
+                            });
+                        }
+                    }, 2000);
+                } else {
+                    JOptionPane.showMessageDialog(this,
+                            "Opponent left or rejected. Return to lobby.",
+                            "Rematch Cancelled", JOptionPane.INFORMATION_MESSAGE);
+                    new LobbyFrame(net, me);
+                    dispose();
+                }
+            }
+
+            case "rematch_start" -> {
+                if (rematchDialog != null) rematchDialog.dispose();
+                String newRoom = p.get("roomId").getAsString();
+                String newLetters = p.get("letters").getAsString();
+                int duration = p.get("durationSec").getAsInt();
+                new GameFrame(net, me, opponent, newRoom, newLetters, duration);
+                dispose();
+            }
+        }
+    }
+
+
+    /** Lấy lại điểm hiện tại từ nhãn để hiển thị winner */
+    private void updateScoresFromLabels() {
+        try {
+            scoreMe = Integer.parseInt(lblScore1.getText().replaceAll("\\D", ""));
+            scoreOp = Integer.parseInt(lblScore2.getText().replaceAll("\\D", ""));
+        } catch (Exception ignore) {}
+    }
+
 }

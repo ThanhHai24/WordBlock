@@ -75,4 +75,7 @@ public class GameSession {
             scores.put(player, score);
         }
     }
+    
+    public String getPlayerA(){ return playerA; }
+    public String getPlayerB(){ return playerB; }
 }

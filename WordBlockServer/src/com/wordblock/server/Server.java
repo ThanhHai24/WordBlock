@@ -16,6 +16,8 @@ public class Server {
     static final Map<String, String> pendingInvites = new ConcurrentHashMap<>(); // target -> inviter
     static final Map<String, GameSession> rooms = new ConcurrentHashMap<>();     // roomId -> session
     static final Map<String, String> userRoom = new ConcurrentHashMap<>();       // username -> roomId
+    
+    public static final Map<String, Map<String, Boolean>> rematchVotes = new ConcurrentHashMap<>();
 
     static final UserDAO userDAO = new UserDAOImpl();
     static final WordDAO wordDAO = new WordDAOImpl();

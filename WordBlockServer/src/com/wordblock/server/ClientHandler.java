@@ -9,12 +9,15 @@ import static com.wordblock.server.Server.userDAO;
 import java.io.*;
 import java.net.Socket;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class ClientHandler extends Thread {
     private final Socket socket;
     private PrintWriter out; private BufferedReader in;
     private String username = null;
+    
+    private static final int GAME_DURATION_MS = 10_000;
 
     private static class Msg { String type; JsonObject payload; }
 
@@ -40,6 +43,7 @@ public class ClientHandler extends Thread {
                     case "leave_game"   -> onLeaveGame();
                     case "leaderboard_request" -> onLeaderboardRequest();
                     case "match_history" -> onMatchHistory();
+                    case "rematch_response" -> onRematchResponse(m.payload);
                     default             -> sendRaw(Server.gson.toJson(Map.of("type","error","payload",Map.of("message","Unknown type"))));
                 }
             }
@@ -154,14 +158,14 @@ public class ClientHandler extends Thread {
         if("accept".equalsIgnoreCase(decision)){
             String roomId = "R"+ThreadLocalRandom.current().nextInt(100000,999999);
             String letters = genLetters(8);
-            GameSession session = new GameSession(roomId, from, username, Server.validator, 120_000, letters);
+            GameSession session = new GameSession(roomId, from, username, Server.validator, GAME_DURATION_MS, letters);
             session.setTickListener(new GameSession.TickListener() {
                 @Override public void onTick(String rid, int secLeft, Map<String,Integer> sc) {
                     Server.broadcastToRoom(rid, Map.of("type","timer_tick","payload", Map.of("roomId", rid, "secLeft", secLeft, "scores", sc)));
                 }
                 @Override public void onEnd(String rid, Map<String,Integer> finalScores) {
                     Server.broadcastToRoom(rid, Map.of("type","game_end","payload", Map.of("roomId", rid, "scores", finalScores)));
-                    Server.rooms.remove(rid);
+//                    Server.rooms.remove(rid);
                     // clear user->room
                         try {
                             String winner = null, loser = null;
@@ -212,8 +216,8 @@ public class ClientHandler extends Thread {
             Server.userRoom.put(from, roomId);
             Server.userRoom.put(username, roomId);
 
-            inviter.sendRaw(Server.gson.toJson(Map.of("type","match_start","payload", Map.of("roomId",roomId,"opponent",username,"letters",letters,"durationSec",120))));
-            sendRaw(Server.gson.toJson(Map.of("type","match_start","payload", Map.of("roomId",roomId,"opponent",from,"letters",letters,"durationSec",120))));
+            inviter.sendRaw(Server.gson.toJson(Map.of("type","match_start","payload", Map.of("roomId",roomId,"opponent",username,"letters",letters,"durationSec",GAME_DURATION_MS / 1000))));
+            sendRaw(Server.gson.toJson(Map.of("type","match_start","payload", Map.of("roomId",roomId,"opponent",from,"letters",letters,"durationSec",GAME_DURATION_MS / 1000))));
             session.start();
         } else {
             inviter.sendRaw(Server.gson.toJson(Map.of("type","invite_rejected","payload", Map.of("by",username))));
@@ -303,12 +307,36 @@ public class ClientHandler extends Thread {
             if (rid != null) {
                 var session = Server.rooms.get(rid);
                 if (session != null && session.isRunning()) {
+                    // Xác định đối thủ
+                    String opponent = session.getPlayerA().equals(username)
+                            ? session.getPlayerB()
+                            : session.getPlayerA();
+
+                    // Gán điểm thua cho người rời
                     session.setPlayerScore(username, -999);
-                    session.stop(); // Dừng trận, gửi game_end cho đối thủ
+                    session.stop(); // Dừng trận (onEnd được gọi nội bộ)
+
+                    // Lấy điểm cuối
+                    var finalScores = session.getScores();
+
+                    // 🟢 Gửi kết quả CHỈ cho người còn lại
+                    if (Server.online.containsKey(opponent)) {
+                        Server.online.get(opponent).sendRaw(Server.gson.toJson(Map.of(
+                            "type", "game_end",
+                            "payload", Map.of(
+                                "roomId", session.getRoomId(),
+                                "scores", finalScores,
+                                "endedByLeave", true
+                            )
+                        )));
+                    }
+
+                    // 🗑️ Xóa session khỏi danh sách phòng (không gửi rematch_offer)
+                    Server.rooms.remove(rid);
                 }
             }
 
-            // Gửi xác nhận lại cho client đã thoát
+            // Gửi xác nhận cho client đã thoát
             sendRaw(Server.gson.toJson(Map.of(
                 "type", "leave_result",
                 "payload", Map.of("success", true)
@@ -318,6 +346,7 @@ public class ClientHandler extends Thread {
             Server.broadcastOnline();
 
             System.out.println("[INFO] Player " + username + " left the game manually (score set to -999).");
+
         } catch (Exception e) {
             e.printStackTrace();
             sendRaw(Server.gson.toJson(Map.of(
@@ -326,6 +355,7 @@ public class ClientHandler extends Thread {
             )));
         }
     }
+
     private void onLeaderboardRequest() {
         try {
             var list = Server.userDAO.getLeaderboard(10); // Top 10
@@ -358,6 +388,10 @@ public class ClientHandler extends Thread {
 
             // Gửi về client
             sendRaw(Server.gson.toJson(Map.of(
+                "type", "online_list",
+                "payload", Map.of("users", users)
+            )));
+            System.out.println(Server.gson.toJson(Map.of(
                 "type", "online_list",
                 "payload", Map.of("users", users)
             )));
@@ -441,6 +475,156 @@ public class ClientHandler extends Thread {
                 "type", "match_history_result",
                 "payload", Map.of("success", false, "message", "Lỗi truy vấn lịch sử đấu")
             )));
+        }
+    }
+    // ======================= REMATCH FEATURE =======================
+
+    // Khi một trận đấu kết thúc (được gọi từ GameSession.onEnd)
+    public static void handleGameEnd(String rid, Map<String, Integer> finalScores) {
+        try {
+            Server.broadcastToRoom(rid, Map.of(
+                "type", "game_end",
+                "payload", Map.of("roomId", rid, "scores", finalScores)
+            ));
+
+            GameSession session = Server.rooms.get(rid);
+            if (session == null) return;
+
+            String p1 = session.getPlayerA();
+            String p2 = session.getPlayerB();
+
+            // Lưu kết quả vào DB
+            User u1 = Server.userDAO.findByUsername(p1);
+            User u2 = Server.userDAO.findByUsername(p2);
+            if (u1 != null && u2 != null) {
+                int s1 = finalScores.getOrDefault(p1, 0);
+                int s2 = finalScores.getOrDefault(p2, 0);
+                Server.matchDAO.saveMatch(u1.getId(), u2.getId(), s1, s2);
+                System.out.printf("[DB] Saved match: %s (%d) vs %s (%d)%n", p1, s1, p2, s2);
+            }
+
+            // Gửi lời mời rematch nếu cả 2 còn online
+            if (Server.online.containsKey(p1) && Server.online.containsKey(p2)) {
+                // kiểm tra nếu không có flag 'endedByLeave' thì mới gửi
+                Server.rematchVotes.put(rid, new ConcurrentHashMap<>());
+                Server.broadcastToRoom(rid, Map.of(
+                    "type", "rematch_offer",
+                    "payload", Map.of("roomId", rid)
+                ));
+            } else {
+                System.out.println("[INFO] Skip rematch_offer because one player offline/left.");
+            }
+
+            // Xóa phòng cũ khỏi userRoom
+            Server.userRoom.entrySet().removeIf(e -> e.getValue().equals(rid));
+
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    // Khi client gửi phản hồi rematch_response
+    private void onRematchResponse(JsonObject p) {
+        System.out.println("Respond: " + p);
+        try {
+            String roomId = p.get("roomId").getAsString();
+            boolean accept = p.get("accept").getAsBoolean();
+            Map<String, Boolean> votes = Server.rematchVotes.computeIfAbsent(roomId, k -> new ConcurrentHashMap<>());
+            
+            System.out.printf("[REMATCH] %s responded %s for room %s%n", username, accept, roomId);
+            System.out.println("[REMATCH] Current votes: " + votes);
+
+            votes.put(username, accept);
+            GameSession prev = Server.rooms.get(roomId);
+
+            // Tìm đối thủ
+            String opponent = null;
+            if (prev != null) {
+                opponent = prev.getPlayerA().equals(username) ? prev.getPlayerB() : prev.getPlayerA();
+            } else {
+                // Nếu session đã bị remove
+                for (var entry : Server.userRoom.entrySet()) {
+                    if (entry.getKey().equals(username)) {
+                        String rid = entry.getValue();
+                        GameSession gs = Server.rooms.get(rid);
+                        if (gs != null) {
+                            opponent = gs.getPlayerA().equals(username) ? gs.getPlayerB() : gs.getPlayerA();
+                        }
+                    }
+                }
+            }
+
+            // Gửi thông tin cho đối thủ biết mình đã phản hồi
+            if (opponent != null && Server.online.containsKey(opponent)) {
+                Server.online.get(opponent).sendRaw(Server.gson.toJson(Map.of(
+                    "type", "rematch_update",
+                    "payload", Map.of("roomId", roomId, "user", username, "accept", accept)
+                )));
+            }
+
+            // Nếu 1 người từ chối => hủy rematch
+            if (!accept) {
+                Server.broadcastToRoom(roomId, Map.of(
+                    "type", "rematch_cancelled",
+                    "payload", Map.of("roomId", roomId, "by", username)
+                ));
+                Server.rematchVotes.remove(roomId);
+                return;
+            }
+
+            // Nếu cả 2 đồng ý => tạo trận mới
+            if (votes.size() == 2 && votes.values().stream().allMatch(v -> v)) {
+                String newRoomId = "R" + ThreadLocalRandom.current().nextInt(100000, 999999);
+                String letters = genLetters(8);
+                
+
+                // Lấy 2 player
+                if (prev == null) return;
+                String p1 = prev.getPlayerA();
+                String p2 = prev.getPlayerB();
+
+                GameSession session = new GameSession(newRoomId, p1, p2, Server.validator, GAME_DURATION_MS, letters);
+                Server.rooms.put(newRoomId, session);
+                Server.userRoom.put(p1, newRoomId);
+                Server.userRoom.put(p2, newRoomId);
+
+                session.setTickListener(new GameSession.TickListener() {
+                    @Override
+                    public void onTick(String rid, int secLeft, Map<String, Integer> sc) {
+                        Server.broadcastToRoom(rid, Map.of("type", "timer_tick",
+                            "payload", Map.of("roomId", rid, "secLeft", secLeft, "scores", sc)));
+                    }
+
+                    @Override
+                    public void onEnd(String rid, Map<String, Integer> finalScores) {
+                        ClientHandler.handleGameEnd(rid, finalScores);
+                    }
+                });
+
+                session.start();
+                Server.rematchVotes.remove(roomId);
+
+                // Thông báo cho cả 2
+                Server.broadcastToRoom(newRoomId, Map.of(
+                    "type", "rematch_start",
+                    "payload", Map.of(
+                        "roomId", newRoomId,
+                        "letters", letters,
+                        "durationSec", GAME_DURATION_MS / 1000,
+                        "opponentA", p1,
+                        "opponentB", p2
+                    )
+                ));
+                
+                System.out.println("[ROOM] Deleted room: " + roomId);
+                System.out.println("[REMATCH] Started new game for " + p1 + " vs " + p2);
+                // ✅ Dọn dẹp phòng cũ sau khi tạo rematch thành công
+                Server.rooms.remove(roomId);
+
+            }
+
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
