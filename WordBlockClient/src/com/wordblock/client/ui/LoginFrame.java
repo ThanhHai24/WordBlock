@@ -20,7 +20,9 @@ public class LoginFrame extends JFrame {
         super("WordBlock – Login");
 
         // ================= Kết nối Server =================
+//        net = new NetworkClient("localhost", 5000);        
         net = new NetworkClient("172.11.222.94", 5000);
+
         boolean ok = net.connect();
         if (!ok) {
             JOptionPane.showMessageDialog(
@@ -121,6 +123,8 @@ public class LoginFrame extends JFrame {
         btLogin.putClientProperty(FlatClientProperties.STYLE, "background:#0078D7;");
         btReg.putClientProperty(FlatClientProperties.STYLE, "background:#eeeeee;");
 
+        getRootPane().setDefaultButton(btLogin);
+        
         JPanel south = new JPanel();
         south.setOpaque(false);
         south.add(btReg);

@@ -34,6 +34,10 @@ public class GameFrame extends JFrame {
     private String letters;
     private int scoreMe = 0;
     private int scoreOp = 0;
+    
+    private Player bgPlayer;
+    private Thread bgMusicThread;
+    private boolean bgMusicPlaying = false;
 
     // --- Rematch state ---
     private boolean rematchDialogShown = false;
@@ -59,6 +63,8 @@ public class GameFrame extends JFrame {
 
         initUI();
         initEvents();
+        
+        playBackgroundMusicMP3("assets/sounds/bg.mp3");
 
         net.setOnMessage(this::onServer);
         setVisible(true);
@@ -174,14 +180,54 @@ public class GameFrame extends JFrame {
     }
 
     private String pickWinner() {
-        if (scoreMe > scoreOp) return me;
-        if (scoreOp > scoreMe) return opponent;
+        stopBackgroundMusicMP3();
+        if (scoreMe > scoreOp) {
+            playSound("assets/sounds/win.mp3");
+            return me;
+        }
+        if (scoreOp > scoreMe) {
+            playSound("assets/sounds/lose.mp3");
+            return opponent;
+        }
+        playSound("assets/sounds/draw.mp3");
         return "Draw";
     }
+    
+    private void playBackgroundMusicMP3(String path) {
+        bgMusicPlaying = true;
+        bgMusicThread = new Thread(() -> {
+            while (bgMusicPlaying) {
+                try (FileInputStream fis = new FileInputStream(path)) {
+                    bgPlayer = new Player(fis);
+                    bgPlayer.play(); // Phát nhạc
+                } catch (Exception e) {
+                    if (bgMusicPlaying)
+                        System.err.println("Background MP3 error: " + e.getMessage());
+                    break;
+                }
+            }
+        });
+        bgMusicThread.start();
+    }
 
+    private void stopBackgroundMusicMP3() {
+        bgMusicPlaying = false;
+        try {
+            if (bgPlayer != null) {
+                bgPlayer.close(); // Dừng ngay lập tức
+            }
+        } catch (Exception ignored) {}
+
+        if (bgMusicThread != null && bgMusicThread.isAlive()) {
+            bgMusicThread.interrupt();
+        }
+    }
+
+    
     private void onExit() {
         int confirm = JOptionPane.showConfirmDialog(this, "Do you want to leave the match?", "Exit", JOptionPane.YES_NO_OPTION);
         if (confirm == JOptionPane.YES_OPTION) {
+            stopBackgroundMusicMP3();
             if (timer != null) timer.cancel();
             net.send(Map.of("type", "leave_game"));
             new LobbyFrame(net, me);
@@ -224,14 +270,10 @@ public class GameFrame extends JFrame {
                     case "game_end" -> {
                         if (!roomId.equals(p.get("roomId").getAsString())) return;
                         updateScores(p.getAsJsonObject("scores"));
+                        stopBackgroundMusicMP3();
                         boolean endedByLeave = p.has("endedByLeave") && p.get("endedByLeave").getAsBoolean();
                         if (endedByLeave) {
                             String winner = pickWinner();
-                            
-                            // Phát âm thanh dựa vào kết quả
-                            if (winner.equals(me)) playSound("assets/sounds/win.mp3");
-                            else if (winner.equals("Draw")) playSound("assets/sounds/draw.mp3");
-                            else playSound("assets/sounds/lose.mp3");
                             
                             JOptionPane.showMessageDialog(this,
                                     "🎮 Game Over!\nOpponent Left!\nWinner: " + winner,
@@ -257,11 +299,6 @@ public class GameFrame extends JFrame {
         updateScoresFromLabels();
 
         String winner = pickWinner();
-        
-        // Phát âm thanh kết thúc game
-        if (winner.equals(me)) playSound("assets/sounds/win.mp3");
-        else if (winner.equals("Draw")) playSound("assets/sounds/draw.mp3");
-        else playSound("assets/sounds/lose.mp3");
         
         rematchDialog = new JDialog(this, "Game End!", true);
         rematchDialog.setLayout(new BorderLayout(10, 10));

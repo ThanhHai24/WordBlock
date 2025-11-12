@@ -350,13 +350,11 @@ public class ClientHandler extends Thread {
             String result = b.toString();
 
             // ✅ Kiểm tra có ít nhất 1 nguyên âm & 1 phụ âm
-            boolean hasVowel = result.chars().anyMatch(ch -> vowels.indexOf(ch) >= 0);
-            boolean hasConsonant = result.chars().anyMatch(ch -> consonants.indexOf(ch) >= 0);
+            long vowelCount = result.chars().filter(ch -> vowels.indexOf(ch) >= 0).count();
+            long consonantCount = result.chars().filter(ch -> consonants.indexOf(ch) >= 0).count();
 
-            if (hasVowel && hasConsonant)
-                return result; // hợp lệ → trả về luôn
-
-            // Nếu không đạt điều kiện → lặp lại (rất nhanh)
+            if (vowelCount >= 2 && consonantCount >= 1)
+                return result; // hợp lệ → trả về
         }
     }
     

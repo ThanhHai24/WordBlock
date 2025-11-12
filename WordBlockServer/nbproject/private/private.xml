@@ -5,6 +5,7 @@
         <group>
             <file>file:/C:/Users/GIGABYTE/OneDrive/Desktop/Class/WordBlock/WordBlockServer/src/com/wordblock/server/ClientHandler.java</file>
             <file>file:/C:/Users/GIGABYTE/OneDrive/Desktop/Class/WordBlock/WordBlockServer/src/com/wordblock/dao/WordDAOImpl.java</file>
+            <file>file:/C:/Users/GIGABYTE/OneDrive/Desktop/Class/WordBlock/WordBlockServer/src/com/wordblock/game/GameSession.java</file>
             <file>file:/C:/Users/GIGABYTE/OneDrive/Desktop/Class/WordBlock/WordBlockServer/src/com/wordblock/server/Server.java</file>
             <file>file:/C:/Users/GIGABYTE/OneDrive/Desktop/Class/WordBlock/WordBlockServer/src/com/wordblock/dao/WordDAO.java</file>
         </group>
