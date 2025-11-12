@@ -376,7 +376,7 @@ public class ClientHandler extends Thread {
                     // Lấy điểm cuối
                     var finalScores = session.getScores();
 
-                    // 🟢 Gửi kết quả CHỈ cho người còn lại
+                    //Gửi kết quả cho người còn lại
                     if (Server.online.containsKey(opponent)) {
                         Server.online.get(opponent).sendRaw(Server.gson.toJson(Map.of(
                             "type", "game_end",
@@ -415,7 +415,7 @@ public class ClientHandler extends Thread {
 
     private void onLeaderboardRequest() {
         try {
-            var list = Server.userDAO.getLeaderboard(20); // Top 10
+            var list = Server.userDAO.getLeaderboard(20);
             var data = list.stream().map(u -> Map.of(
                 "username", u.getUsername(),
                 "points", u.getTotalPoints()

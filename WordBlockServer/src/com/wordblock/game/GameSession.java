@@ -42,14 +42,13 @@ public class GameSession {
         
         submittedByPlayer.putIfAbsent(user, ConcurrentHashMap.newKeySet());
         Set<String> submitted = submittedByPlayer.get(user);
-        // Nếu từ đã dùng -> trừ điểm
-        // Nếu từ đã dùng bởi chính người đó -> trừ điểm
+        // đã dùng -> ko trừ điểm
         if (submitted.contains(w)) {
             return false;
         }
 
         // Nếu không có trong dictionary -> trừ điểm
-        if (!validator.isValid(w, letterPool)) {   // 🟢 truyền thêm pool của game
+        if (!validator.isValid(w, letterPool)) {   // truyền thêm pool của game
             scores.put(user, current - 1);
             return false;
         }
