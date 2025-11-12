@@ -69,9 +69,9 @@ public class RegisterFrame extends JFrame {
         tfPass.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Enter password...");
         tfConfirm.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Confirm password...");
 
-        tfUser.putClientProperty(FlatClientProperties.STYLE, "arc:12; focusWidth:1; margin:5,10,5,10");
-        tfPass.putClientProperty(FlatClientProperties.STYLE, "arc:12; focusWidth:1; margin:5,10,5,10");
-        tfConfirm.putClientProperty(FlatClientProperties.STYLE, "arc:12; focusWidth:1; margin:5,10,5,10");
+        tfUser.putClientProperty(FlatClientProperties.STYLE, "focusWidth:1; margin:5,10,5,10");
+        tfPass.putClientProperty(FlatClientProperties.STYLE, "focusWidth:1; margin:5,10,5,10");
+        tfConfirm.putClientProperty(FlatClientProperties.STYLE, "focusWidth:1; margin:5,10,5,10");
 
         // Add components
         c.gridx = 0; c.gridy = 0; formPanel.add(lbUser, c);
@@ -87,8 +87,8 @@ public class RegisterFrame extends JFrame {
         btReg.setFont(uiFont);
         btBack.setFont(uiFont);
 
-        btReg.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#0078D7; foreground:#FFFFFF");
-        btBack.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#eeeeee;");
+        btReg.putClientProperty(FlatClientProperties.STYLE, "background:#0078D7; foreground:#FFFFFF");
+        btBack.putClientProperty(FlatClientProperties.STYLE, "background:#eeeeee;");
 
         btReg.addActionListener(e -> {
             String pass = new String(tfPass.getPassword());
@@ -119,7 +119,7 @@ public class RegisterFrame extends JFrame {
         wrapper.add(formPanel, BorderLayout.CENTER);
         wrapper.add(south, BorderLayout.SOUTH);
 
-        wrapper.putClientProperty(FlatClientProperties.STYLE, "background:#F8F8F8; arc:20; borderWidth:0;");
+        wrapper.putClientProperty(FlatClientProperties.STYLE, "background:#F8F8F8; borderWidth:0;");
 
         add(wrapper);
         setResizable(false);

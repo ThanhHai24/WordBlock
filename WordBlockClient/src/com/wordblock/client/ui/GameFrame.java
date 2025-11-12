@@ -119,8 +119,8 @@ public class GameFrame extends JFrame {
         inputPanel.add(new JLabel("Enter word:"));
         inputPanel.add(txtInput);
         inputPanel.add(btnSubmit);
-        btnSubmit.putClientProperty(FlatClientProperties.STYLE, "arc:12; background:#0078D7; padding:5,10,5,10;");
-        btnExit.putClientProperty(FlatClientProperties.STYLE, "arc:12; background:#eee;");
+        btnSubmit.putClientProperty(FlatClientProperties.STYLE, "background:#0078D7;");
+        btnExit.putClientProperty(FlatClientProperties.STYLE, "background:#eee;");
 
         inputPanel.add(btnExit);
 

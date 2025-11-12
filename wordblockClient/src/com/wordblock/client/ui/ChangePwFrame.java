@@ -89,7 +89,7 @@ public class ChangePwFrame extends JFrame {
         gbc.gridwidth = 2;
         btnSubmit.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnSubmit.putClientProperty(FlatClientProperties.STYLE,
-                "background: #1976D2; arc: 20; borderWidth: 0; hoverBackground: #1565C0;");
+                "background: #1976D2; borderWidth: 0; hoverBackground: #1565C0;");
         btnSubmit.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         btnSubmit.addActionListener(this::handleChangePw);
         panel.add(btnSubmit, gbc);
@@ -115,7 +115,7 @@ public class ChangePwFrame extends JFrame {
     private void stylePasswordField(JPasswordField field, String placeholder) {
         field.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, placeholder);
         field.putClientProperty(FlatClientProperties.STYLE,
-                "arc:15; borderWidth:1; borderColor:#D0D0D0; focusWidth:2; focusColor:#1976D2;");
+                "borderWidth:1; borderColor:#D0D0D0; focusWidth:2; focusColor:#1976D2;");
         field.setFont(new Font("Segoe UI", Font.PLAIN, 13));
         field.setColumns(18);
     }

@@ -20,7 +20,7 @@ public class LoginFrame extends JFrame {
         super("WordBlock – Login");
 
         // ================= Kết nối Server =================
-        net = new NetworkClient("localhost", 5000);
+        net = new NetworkClient("172.11.222.94", 5000);
         boolean ok = net.connect();
         if (!ok) {
             JOptionPane.showMessageDialog(
@@ -98,8 +98,8 @@ public class LoginFrame extends JFrame {
         // Bo góc và placeholder
         tfUser.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Enter username...");
         tfPass.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Enter password...");
-        tfUser.putClientProperty(FlatClientProperties.STYLE, "arc:12; focusWidth:1; margin:5,10,5,10");
-        tfPass.putClientProperty(FlatClientProperties.STYLE, "arc:12; focusWidth:1; margin:5,10,5,10");
+        tfUser.putClientProperty(FlatClientProperties.STYLE, "focusWidth:1; margin:5,10,5,10");
+        tfPass.putClientProperty(FlatClientProperties.STYLE, "focusWidth:1; margin:5,10,5,10");
 
         c.gridx = 0; c.gridy = 0;
         formPanel.add(lbUser, c);
@@ -118,8 +118,8 @@ public class LoginFrame extends JFrame {
         btReg.setFont(uiFont);
 
         // Style nút
-        btLogin.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#0078D7;");
-        btReg.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#eeeeee;");
+        btLogin.putClientProperty(FlatClientProperties.STYLE, "background:#0078D7;");
+        btReg.putClientProperty(FlatClientProperties.STYLE, "background:#eeeeee;");
 
         JPanel south = new JPanel();
         south.setOpaque(false);

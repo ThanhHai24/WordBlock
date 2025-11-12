@@ -77,7 +77,7 @@ public class MatchHistoryFrame extends JFrame {
         JButton btnClose = new JButton("✖ Close");
         btnClose.setFont(emojiFont);
         btnClose.putClientProperty(FlatClientProperties.STYLE,
-                "arc:15; background:#E81123; foreground:#FFFFFF; focusWidth:0; padding:6,14,6,14;");
+                "background:#E81123; foreground:#FFFFFF; focusWidth:0;");
         btnClose.addActionListener(e -> dispose());
 
         JPanel bottom = new JPanel();

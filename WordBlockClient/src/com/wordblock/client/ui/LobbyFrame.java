@@ -70,7 +70,7 @@ public class LobbyFrame extends JFrame {
         for (JButton b : new JButton[]{btnRefresh, btnHistory, btnChangePass, btnLogout}) {
             b.setFont(emojiFont);
             b.putClientProperty(FlatClientProperties.STYLE,
-                    "arc:12; background:#0078D7; focusWidth:0; padding:6,12,6,12;");
+                    "background:#0078D7; focusWidth:0;");
             rightButtons.add(b);
         }
         top.add(rightButtons, BorderLayout.EAST);
@@ -80,14 +80,14 @@ public class LobbyFrame extends JFrame {
         JPanel leftPanel = new JPanel(new BorderLayout());
         leftPanel.setBorder(BorderFactory.createTitledBorder("🏆 Leaderboard"));
         lstRank.setFont(emojiFont);
-        lstRank.putClientProperty(FlatClientProperties.STYLE, "arc:8; background:#F8F8F8");
+        lstRank.putClientProperty(FlatClientProperties.STYLE, "background:#F8F8F8");
         leftPanel.add(new JScrollPane(lstRank), BorderLayout.CENTER);
 
         // ===== Online Players Panel =====
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setBorder(BorderFactory.createTitledBorder("💬 Online Players"));
         lstOnline.setFont(emojiFont);
-        lstOnline.putClientProperty(FlatClientProperties.STYLE, "arc:8; background:#F8F8F8");
+        lstOnline.putClientProperty(FlatClientProperties.STYLE, "background:#F8F8F8");
         rightPanel.add(new JScrollPane(lstOnline), BorderLayout.CENTER);
 
         // ===== Split Pane =====
