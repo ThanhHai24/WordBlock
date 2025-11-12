@@ -2,6 +2,8 @@ package com.wordblock.client.ui;
 
 import com.google.gson.*;
 import com.wordblock.client.net.NetworkClient;
+import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.FlatClientProperties;
 
 import javax.swing.*;
 import java.awt.*;
@@ -17,44 +19,82 @@ public class RegisterFrame extends JFrame {
         super("WordBlock – Register");
         this.net = net;
         net.setOnMessage(this::onServer);
+
+        // Chuyển hướng khi nhấn "X" về LoginFrame
+        setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                new LoginFrame().setVisible(true);
+                dispose();
+            }
+        });
+
         initUI();
     }
 
     private void initUI() {
-        Font emojiFont = new Font("Segoe UI Emoji", Font.PLAIN, 14);
+        try {
+            FlatLightLaf.setup(); // Hoặc FlatDarkLaf
+        } catch (Exception ex) {
+            System.err.println("Failed to initialize FlatLaf: " + ex.getMessage());
+        }
 
-        JPanel pn = new JPanel(new GridBagLayout());
+        Font uiFont = new Font("Segoe UI", Font.PLAIN, 14);
+
+        // Panel form
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setOpaque(false);
         GridBagConstraints c = new GridBagConstraints();
         c.insets = new Insets(6, 6, 6, 6);
         c.anchor = GridBagConstraints.WEST;
 
-        JLabel lbUser = new JLabel("👤 Username:");
-        JLabel lbPass = new JLabel("🔒 Password:");
-        JLabel lbConfirm = new JLabel("🔁 Confirm:");
-        lbUser.setFont(emojiFont);
-        lbPass.setFont(emojiFont);
-        lbConfirm.setFont(emojiFont);
-        tfUser.setFont(emojiFont);
-        tfPass.setFont(emojiFont);
-        tfConfirm.setFont(emojiFont);
+        // Load icon PNG (resize)
+        JLabel lbUser = new JLabel("Username:");
+        lbUser.setIcon(loadIcon("assets/icons/user.png", 20, 20));
+        JLabel lbPass = new JLabel("Password:");
+        lbPass.setIcon(loadIcon("assets/icons/lock.png", 20, 20));
+        JLabel lbConfirm = new JLabel("Confirm:");
+        lbConfirm.setIcon(loadIcon("assets/icons/lock.png", 20, 20));
 
-        c.gridx = 0; c.gridy = 0; pn.add(lbUser, c);
-        c.gridx = 1; pn.add(tfUser, c);
-        c.gridx = 0; c.gridy = 1; pn.add(lbPass, c);
-        c.gridx = 1; pn.add(tfPass, c);
-        c.gridx = 0; c.gridy = 2; pn.add(lbConfirm, c);
-        c.gridx = 1; pn.add(tfConfirm, c);
+        lbUser.setFont(uiFont);
+        lbPass.setFont(uiFont);
+        lbConfirm.setFont(uiFont);
 
-        JButton btReg = new JButton("📝 Register");
-        JButton btBack = new JButton("⬅️ Back");
-        btReg.setFont(emojiFont);
-        btBack.setFont(emojiFont);
+        tfUser.setFont(uiFont);
+        tfPass.setFont(uiFont);
+        tfConfirm.setFont(uiFont);
+
+        // Placeholder + bo góc
+        tfUser.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Enter username...");
+        tfPass.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Enter password...");
+        tfConfirm.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Confirm password...");
+
+        tfUser.putClientProperty(FlatClientProperties.STYLE, "arc:12; focusWidth:1; margin:5,10,5,10");
+        tfPass.putClientProperty(FlatClientProperties.STYLE, "arc:12; focusWidth:1; margin:5,10,5,10");
+        tfConfirm.putClientProperty(FlatClientProperties.STYLE, "arc:12; focusWidth:1; margin:5,10,5,10");
+
+        // Add components
+        c.gridx = 0; c.gridy = 0; formPanel.add(lbUser, c);
+        c.gridx = 1; formPanel.add(tfUser, c);
+        c.gridx = 0; c.gridy = 1; formPanel.add(lbPass, c);
+        c.gridx = 1; formPanel.add(tfPass, c);
+        c.gridx = 0; c.gridy = 2; formPanel.add(lbConfirm, c);
+        c.gridx = 1; formPanel.add(tfConfirm, c);
+
+        // Buttons
+        JButton btReg = new JButton("Register");
+        JButton btBack = new JButton("Back");
+        btReg.setFont(uiFont);
+        btBack.setFont(uiFont);
+
+        btReg.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#0078D7; foreground:#FFFFFF");
+        btBack.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#eeeeee;");
 
         btReg.addActionListener(e -> {
             String pass = new String(tfPass.getPassword());
             String confirm = new String(tfConfirm.getPassword());
             if (!pass.equals(confirm)) {
-                JOptionPane.showMessageDialog(this, "Passwords do not match!");
+                JOptionPane.showMessageDialog(this, "Passwords do not match!", "Register", JOptionPane.WARNING_MESSAGE);
                 return;
             }
             net.send("register", Map.of(
@@ -69,18 +109,29 @@ public class RegisterFrame extends JFrame {
         });
 
         JPanel south = new JPanel();
+        south.setOpaque(false);
         south.add(btBack);
         south.add(btReg);
 
-        setLayout(new BorderLayout());
-        add(pn, BorderLayout.CENTER);
-        add(south, BorderLayout.SOUTH);
+        // Wrapper
+        JPanel wrapper = new JPanel(new BorderLayout(10, 10));
+        wrapper.setOpaque(false);
+        wrapper.add(formPanel, BorderLayout.CENTER);
+        wrapper.add(south, BorderLayout.SOUTH);
 
-        setDefaultCloseOperation(EXIT_ON_CLOSE);
+        wrapper.putClientProperty(FlatClientProperties.STYLE, "background:#F8F8F8; arc:20; borderWidth:0;");
+
+        add(wrapper);
         setResizable(false);
         pack();
         setLocationRelativeTo(null);
         setVisible(true);
+    }
+
+    private ImageIcon loadIcon(String path, int w, int h) {
+        ImageIcon icon = new ImageIcon(path);
+        Image img = icon.getImage().getScaledInstance(w, h, Image.SCALE_SMOOTH);
+        return new ImageIcon(img);
     }
 
     private void onServer(String line) {
@@ -94,7 +145,7 @@ public class RegisterFrame extends JFrame {
             SwingUtilities.invokeLater(() -> {
                 JOptionPane.showMessageDialog(
                         this,
-                        ok ? "✅ Registration successful!" : "❌ Registration failed.",
+                        ok ? "Registration successful!" : "Registration failed.",
                         "Register",
                         ok ? JOptionPane.INFORMATION_MESSAGE : JOptionPane.ERROR_MESSAGE
                 );

@@ -2,12 +2,15 @@ package com.wordblock.client.ui;
 
 import com.google.gson.*;
 import com.wordblock.client.net.NetworkClient;
+import com.formdev.flatlaf.FlatLightLaf; // Hoặc FlatDarkLaf
+import com.formdev.flatlaf.FlatClientProperties;
 
 import javax.swing.*;
 import java.awt.*;
 import java.util.Map;
 
 public class LoginFrame extends JFrame {
+
     private final NetworkClient net;
     private final JTextField tfUser = new JTextField(15);
     private final JPasswordField tfPass = new JPasswordField(15);
@@ -16,8 +19,7 @@ public class LoginFrame extends JFrame {
     public LoginFrame() {
         super("WordBlock – Login");
 
-        // Kết nối tới server
-//        net = new NetworkClient("172.11.151.215", 5000);
+        // ================= Kết nối Server =================
         net = new NetworkClient("localhost", 5000);
         boolean ok = net.connect();
         if (!ok) {
@@ -29,18 +31,25 @@ public class LoginFrame extends JFrame {
             );
             System.exit(0);
         }
-
         net.setOnMessage(this::onServer);
+
+        // ================= Khởi tạo giao diện =================
         initUI();
     }
 
-    /** ======================= GIAO DIỆN ======================= */
     private void initUI() {
-        Font emojiFont = new Font("Segoe UI Emoji", Font.PLAIN, 14);
+        // ----------------- Theme FlatLaf -----------------
+        try {
+            FlatLightLaf.setup(); // Hoặc FlatDarkLaf.setup();
+        } catch (Exception ex) {
+            System.err.println("Failed to initialize FlatLaf: " + ex.getMessage());
+        }
 
-        // Ảnh nền
+        // Font mặc định
+        Font uiFont = new Font("Segoe UI", Font.PLAIN, 14);
+
+        // ----------------- Ảnh nền -----------------
         ImageIcon bgIcon = new ImageIcon("assets/img/bg_login.jpg");
-
         JPanel bgPanel = new JPanel() {
             @Override
             protected void paintComponent(Graphics g) {
@@ -50,7 +59,7 @@ public class LoginFrame extends JFrame {
         };
         bgPanel.setLayout(new GridBagLayout());
 
-        // ===== LOGO GAME =====
+        // ----------------- Logo -----------------
         ImageIcon logoIcon = new ImageIcon(
                 new ImageIcon("assets/img/gamelogo.png")
                         .getImage()
@@ -59,33 +68,58 @@ public class LoginFrame extends JFrame {
         JLabel logoLabel = new JLabel(logoIcon);
         logoLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-        // ===== FORM LOGIN =====
-        JPanel contentPanel = new JPanel(new GridBagLayout());
-        contentPanel.setOpaque(false);
+        // ----------------- Form Login -----------------
+        JPanel formPanel = new JPanel(new GridBagLayout());
+        formPanel.setOpaque(false);
         GridBagConstraints c = new GridBagConstraints();
         c.insets = new Insets(8, 8, 8, 8);
         c.anchor = GridBagConstraints.WEST;
 
-        JLabel lbUser = new JLabel("👤 Username:");
-        lbUser.setFont(emojiFont);
-        lbUser.setForeground(Color.BLACK);
+        // Label và input
+        // Load icon và resize
+        ImageIcon userIcon = new ImageIcon("assets/icons/user.png");
+        Image imgUser = userIcon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH);
+        userIcon = new ImageIcon(imgUser);
 
-        JLabel lbPass = new JLabel("🔒 Password:");
-        lbPass.setFont(emojiFont);
-        lbPass.setForeground(Color.BLACK);
+        ImageIcon lockIcon = new ImageIcon("assets/icons/lock.png");
+        Image imgLock = lockIcon.getImage().getScaledInstance(20, 20, Image.SCALE_SMOOTH);
+        lockIcon = new ImageIcon(imgLock);
 
-        tfUser.setFont(emojiFont);
-        tfPass.setFont(emojiFont);
+        // Gán vào JLabel
+        JLabel lbUser = new JLabel("Username:");
+        lbUser.setIcon(userIcon);
 
-        c.gridx = 0; c.gridy = 0; contentPanel.add(lbUser, c);
-        c.gridx = 1; contentPanel.add(tfUser, c);
-        c.gridx = 0; c.gridy = 1; contentPanel.add(lbPass, c);
-        c.gridx = 1; contentPanel.add(tfPass, c);
+        JLabel lbPass = new JLabel("Password:");
+        lbPass.setIcon(lockIcon);
 
-        JButton btLogin = new JButton("🔑 Login");
-        JButton btReg = new JButton("📝 Register");
-        btLogin.setFont(emojiFont);
-        btReg.setFont(emojiFont);
+        tfUser.setFont(uiFont);
+        tfPass.setFont(uiFont);
+
+        // Bo góc và placeholder
+        tfUser.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Enter username...");
+        tfPass.putClientProperty(FlatClientProperties.PLACEHOLDER_TEXT, "Enter password...");
+        tfUser.putClientProperty(FlatClientProperties.STYLE, "arc:12; focusWidth:1; margin:5,10,5,10");
+        tfPass.putClientProperty(FlatClientProperties.STYLE, "arc:12; focusWidth:1; margin:5,10,5,10");
+
+        c.gridx = 0; c.gridy = 0;
+        formPanel.add(lbUser, c);
+        c.gridx = 1;
+        formPanel.add(tfUser, c);
+
+        c.gridx = 0; c.gridy = 1;
+        formPanel.add(lbPass, c);
+        c.gridx = 1;
+        formPanel.add(tfPass, c);
+
+        // Nút Login / Register
+        JButton btLogin = new JButton("Login");
+        JButton btReg = new JButton("Register");
+        btLogin.setFont(uiFont);
+        btReg.setFont(uiFont);
+
+        // Style nút
+        btLogin.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#0078D7;");
+        btReg.putClientProperty(FlatClientProperties.STYLE, "arc:20; background:#eeeeee;");
 
         JPanel south = new JPanel();
         south.setOpaque(false);
@@ -94,29 +128,28 @@ public class LoginFrame extends JFrame {
 
         c.gridx = 0; c.gridy = 2; c.gridwidth = 2;
         c.anchor = GridBagConstraints.CENTER;
-        contentPanel.add(south, c);
+        formPanel.add(south, c);
 
-        // ===== BỐ CỤC TỔNG =====
-        JPanel wrapper = new JPanel(new BorderLayout());
+        // ----------------- Wrapper -----------------
+        JPanel wrapper = new JPanel(new BorderLayout(10, 10));
         wrapper.setOpaque(false);
         wrapper.add(logoLabel, BorderLayout.NORTH);
-        wrapper.add(contentPanel, BorderLayout.CENTER);
+        wrapper.add(formPanel, BorderLayout.CENTER);
 
         bgPanel.add(wrapper);
 
+        // ----------------- Thiết lập frame -----------------
         setContentPane(bgPanel);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setResizable(false);
-        setSize(400, 300);
+        setSize(450, 350);
         setLocationRelativeTo(null);
 
-        // ===== SỰ KIỆN NÚT =====
-        btLogin.addActionListener(e -> {
-            net.send("login", Map.of(
-                    "username", tfUser.getText().trim(),
-                    "password", new String(tfPass.getPassword())
-            ));
-        });
+        // ----------------- Sự kiện nút -----------------
+        btLogin.addActionListener(e -> net.send("login", Map.of(
+                "username", tfUser.getText().trim(),
+                "password", new String(tfPass.getPassword())
+        )));
 
         btReg.addActionListener(e -> {
             new RegisterFrame(net).setVisible(true);
@@ -126,8 +159,7 @@ public class LoginFrame extends JFrame {
         setVisible(true);
     }
 
-
-    /** ======================= XỬ LÝ SERVER ======================= */
+    // ======================= Xử lý server =======================
     private void onServer(String line) {
         SwingUtilities.invokeLater(() -> {
             try {
@@ -151,7 +183,9 @@ public class LoginFrame extends JFrame {
                             );
                         }
                     }
-                    default -> { /* Ignore others */ }
+                    default -> {
+                        // Ignore others
+                    }
                 }
             } catch (Exception ex) {
                 System.err.println("Error parsing server message: " + ex.getMessage());

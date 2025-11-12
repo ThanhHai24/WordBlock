@@ -2,15 +2,22 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group name="WordBlock">
-            <file>file:/D:/Code/winter_2025/Wordblock%20Client-Server/wordblockClient/src/com/wordblock/client/ui/LoginFrame.java</file>
-            <file>file:/D:/Code/winter_2025/Wordblock%20Client-Server/wordblockClient/src/com/wordblock/client/ui/LobbyFrame.java</file>
-            <file>file:/D:/Code/winter_2025/Wordblock%20Client-Server/wordblockClient/src/com/wordblock/client/net/NetworkClient.java</file>
-            <file>file:/D:/Code/winter_2025/Wordblock%20Client-Server/wordblockClient/src/com/wordblock/client/ui/GameFrame.java</file>
-            <file>file:/D:/Code/winter_2025/Wordblock%20Client-Server/wordblockClient/src/com/wordblock/client/ui/ChangePwFrame.java</file>
-        </group>
         <group>
-            <file>file:/E:/TEst/WordBlock/wordblockClient/src/com/wordblock/client/ui/GameFrame.java</file>
+            <file>file:/C:/Users/duydk/Downloads/code/wordblockClient/src/com/wordblock/client/ui/Main.java</file>
+            <file>file:/C:/Users/duydk/Downloads/code/wordblockClient/src/com/wordblock/client/net/NetworkClient.java</file>
+            <file>file:/C:/Users/duydk/Downloads/code/wordblockClient/src/com/wordblock/client/ui/LoginFrame.java</file>
+            <file>file:/C:/Users/duydk/Downloads/code/wordblockClient/src/com/wordblock/client/ui/LobbyFrame.java</file>
+            <file>file:/C:/Users/duydk/Downloads/code/wordblockClient/src/com/wordblock/client/ui/RegisterFrame.java</file>
+            <file>file:/C:/Users/duydk/Downloads/code/wordblockClient/src/com/wordblock/client/ui/MatchHistoryFrame.java</file>
+            <file>file:/C:/Users/duydk/Downloads/code/wordblockClient/src/com/wordblock/client/ui/GameFrame.java</file>
+            <file>file:/C:/Users/duydk/Downloads/code/wordblockClient/src/com/wordblock/client/ui/ChangePwFrame.java</file>
+        </group>
+        <group name="WordBlock">
+            <file>file:/D:/Code/winter_2025/Wordblock%20Client-Server/wordblockClient/src/com/wordblock/client/ui/LobbyFrame.java</file>
+            <file>file:/D:/Code/winter_2025/Wordblock%20Client-Server/wordblockClient/src/com/wordblock/client/ui/Main.java</file>
+            <file>file:/D:/Code/winter_2025/Wordblock%20Client-Server/wordblockClient/src/com/wordblock/client/ui/ChangePwFrame.java</file>
+            <file>file:/D:/Code/winter_2025/Wordblock%20Client-Server/wordblockClient/src/com/wordblock/client/ui/LoginFrame.java</file>
+            <file>file:/D:/Code/winter_2025/Wordblock%20Client-Server/wordblockClient/src/com/wordblock/client/ui/GameFrame.java</file>
         </group>
     </open-files>
 </project-private>

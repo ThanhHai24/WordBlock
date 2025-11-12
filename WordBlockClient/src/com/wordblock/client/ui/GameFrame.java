@@ -2,18 +2,23 @@ package com.wordblock.client.ui;
 
 import com.google.gson.*;
 import com.wordblock.client.net.NetworkClient;
+import com.formdev.flatlaf.FlatLightLaf;
+import com.formdev.flatlaf.FlatClientProperties;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
+import java.io.*;
 import java.util.Map;
 import java.util.Timer;
+import javax.sound.sampled.*;
+import javazoom.jl.player.Player;
 
 public class GameFrame extends JFrame {
     private final NetworkClient net;
     private final String me, opponent, roomId;
     private JLabel lblPlayer1, lblPlayer2, lblTimer, lblScore1, lblScore2;
-    private final JTextField txtInput = new JTextField(32);
+    private final JTextField txtInput = new JTextField(20);
     private final JButton btnSubmit = new JButton("Submit");
     private final JButton btnExit = new JButton("Exit");
     private final JPanel lettersPanel = new JPanel();
@@ -29,7 +34,7 @@ public class GameFrame extends JFrame {
     private String letters;
     private int scoreMe = 0;
     private int scoreOp = 0;
-    
+
     // --- Rematch state ---
     private boolean rematchDialogShown = false;
     private JDialog rematchDialog = null;
@@ -42,18 +47,17 @@ public class GameFrame extends JFrame {
         this.letters = letters;
         this.timeLeft = durationSec;
 
+        try { FlatLightLaf.setup(); } catch (Exception ignored) {}
+
         setTitle("Match: " + me + " vs " + opponent);
-        setSize(800, 500);
+        setSize(850, 500);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(DO_NOTHING_ON_CLOSE);
         addWindowListener(new WindowAdapter() {
-            @Override
-            public void windowClosing(java.awt.event.WindowEvent e) {
-                onExit();
-            }
+            public void windowClosing(WindowEvent e) { onExit(); }
         });
 
-        initUI(durationSec);
+        initUI();
         initEvents();
 
         net.setOnMessage(this::onServer);
@@ -61,60 +65,72 @@ public class GameFrame extends JFrame {
     }
 
     /** ====================== UI SETUP ====================== */
-    private void initUI(int durationSec) {
+    private void initUI() {
         setLayout(new BorderLayout(10, 10));
 
-        // === HEADER ===
-        JPanel topPanel = new JPanel(new GridLayout(2, 3, 10, 5));
+        Font emojiFont = new Font("Segoe UI Emoji", Font.BOLD, 14);
+
+        // ===== HEADER PANEL =====
+        JPanel header = new JPanel(new GridLayout(2, 3, 10, 5));
+        header.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+
         lblPlayer1 = new JLabel("👤 " + me, SwingConstants.CENTER);
         lblPlayer2 = new JLabel(opponent + " 👤", SwingConstants.CENTER);
-        lblTimer = new JLabel("⏱ " + durationSec + "s", SwingConstants.CENTER);
+        lblTimer = new JLabel("⏱ " + timeLeft + "s", SwingConstants.CENTER);
         lblScore1 = new JLabel("Score: 0", SwingConstants.CENTER);
         lblScore2 = new JLabel("Score: 0", SwingConstants.CENTER);
 
-        Font headerFont = new Font("Segoe UI Emoji", Font.BOLD, 14);
-        lblPlayer1.setFont(headerFont);
-        lblPlayer2.setFont(headerFont);
+        lblPlayer1.setFont(emojiFont);
+        lblPlayer2.setFont(emojiFont);
         lblTimer.setFont(new Font("Segoe UI Emoji", Font.BOLD, 16));
+        lblScore1.setFont(emojiFont);
+        lblScore2.setFont(emojiFont);
 
-        topPanel.add(lblPlayer1);
-        topPanel.add(lblTimer);
-        topPanel.add(lblPlayer2);
-        topPanel.add(lblScore1);
-        topPanel.add(new JLabel(""));
-        topPanel.add(lblScore2);
-        add(topPanel, BorderLayout.NORTH);
+        header.add(lblPlayer1);
+        header.add(lblTimer);
+        header.add(lblPlayer2);
+        header.add(lblScore1);
+        header.add(new JLabel(""));
+        header.add(lblScore2);
+        add(header, BorderLayout.NORTH);
 
-        // === LETTERS PANEL ===
-        lettersPanel.setLayout(new GridLayout(2, 4, 5, 5));
+        // ===== LETTERS PANEL =====
+        lettersPanel.setLayout(new GridLayout(2, 4, 10, 10));
+        lettersPanel.setBorder(BorderFactory.createTitledBorder("Letters"));
         for (char c : letters.toCharArray()) {
             JLabel lbl = new JLabel(String.valueOf(c).toUpperCase(), SwingConstants.CENTER);
             lbl.setFont(new Font("Consolas", Font.BOLD, 28));
-            lbl.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+            lbl.setBorder(BorderFactory.createLineBorder(Color.DARK_GRAY, 2, true));
+            lbl.setOpaque(true);
+            lbl.setBackground(new Color(230, 230, 250));
             lettersPanel.add(lbl);
         }
         add(lettersPanel, BorderLayout.CENTER);
 
-        // === WORD LIST (RIGHT SIDE) ===
+        // ===== WORD LIST PANEL =====
         lstWords.setBorder(BorderFactory.createTitledBorder("Valid Words"));
-        lstWords.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 13));
+        lstWords.setFont(new Font("Segoe UI Emoji", Font.PLAIN, 14));
         scrollRight.setPreferredSize(new Dimension(200, 0));
         add(scrollRight, BorderLayout.EAST);
 
-        // === INPUT AREA (BOTTOM) ===
-        JPanel bottomPanel = new JPanel(new BorderLayout());
+        // ===== INPUT PANEL =====
+        JPanel inputWrapper = new JPanel(new BorderLayout(5, 5));
         JPanel inputPanel = new JPanel();
         inputPanel.add(new JLabel("Enter word:"));
         inputPanel.add(txtInput);
         inputPanel.add(btnSubmit);
+        btnSubmit.putClientProperty(FlatClientProperties.STYLE, "arc:12; background:#0078D7; padding:5,10,5,10;");
+        btnExit.putClientProperty(FlatClientProperties.STYLE, "arc:12; background:#eee;");
+
         inputPanel.add(btnExit);
 
-        lblStatus.setHorizontalAlignment(SwingConstants.CENTER);
         lblStatus.setFont(new Font("Segoe UI Emoji", Font.BOLD, 12));
+        lblStatus.setHorizontalAlignment(SwingConstants.CENTER);
 
-        bottomPanel.add(inputPanel, BorderLayout.CENTER);
-        bottomPanel.add(lblStatus, BorderLayout.SOUTH);
-        add(bottomPanel, BorderLayout.SOUTH);
+        inputWrapper.add(inputPanel, BorderLayout.CENTER);
+        inputWrapper.add(lblStatus, BorderLayout.SOUTH);
+        inputWrapper.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
+        add(inputWrapper, BorderLayout.SOUTH);
     }
 
     /** ====================== EVENTS ====================== */
@@ -134,82 +150,19 @@ public class GameFrame extends JFrame {
         txtInput.setText("");
     }
 
-    private void onServer(String line) {
-        SwingUtilities.invokeLater(() -> {
-            try {
-                JsonObject obj = JsonParser.parseString(line).getAsJsonObject();
-                String type = obj.get("type").getAsString();
-                JsonObject p = obj.getAsJsonObject("payload");
-
-                switch (type) {
-                    case "timer_tick" -> {
-                        if (!roomId.equals(p.get("roomId").getAsString())) return;
-                        int left = p.get("secLeft").getAsInt();
-                        lblTimer.setText("⏱ " + left + "s");
-                        updateScores(p.getAsJsonObject("scores"));
-                    }
-
-                    case "score_update" -> {
-                        if (!roomId.equals(p.get("roomId").getAsString())) return;
-                        updateScores(p.getAsJsonObject("scores"));
-                    }
-
-                    case "word_result" -> {
-                        if (p.has("word") && !p.get("word").getAsString().equalsIgnoreCase(lastSubmittedWord))
-                            return;
-
-                        boolean ok = p.get("accepted").getAsBoolean();
-                        if (ok) {
-                            wordListModel.addElement(lastSubmittedWord);
-                            lstWords.ensureIndexIsVisible(wordListModel.size() - 1);
-                            showStatus("✅ Valid word: " + lastSubmittedWord, new Color(0, 128, 0));
-                        } else {
-                            showStatus("❌ Invalid word: " + lastSubmittedWord, Color.RED);
-                        }
-                    }
-
-                    case "game_end" -> {
-                        if (!roomId.equals(p.get("roomId").getAsString())) return;
-                        updateScores(p.getAsJsonObject("scores"));
-                        boolean endedByLeave = p.has("endedByLeave") && p.get("endedByLeave").getAsBoolean();
-                        if (endedByLeave) {
-                            updateScores(p.getAsJsonObject("scores"));
-                            String winner = pickWinner();
-                            JOptionPane.showMessageDialog(this,
-                                    "🎮 Game Over!\nOpponent Left!.\nWinner: " + winner,
-                                    "Game Ended", JOptionPane.INFORMATION_MESSAGE);
-                            new LobbyFrame(net, me);
-                            dispose();
-                        } else {
-                            showRematchDialog();
-                        }
-                    }
-
-                    case "rematch_offer" -> {
-                        if (!rematchDialogShown) showRematchDialog();
-                    }
-
-                    case "rematch_update", "rematch_cancelled", "rematch_start" -> {
-                        handleRematchMessage(type, p);
-                    }
-                }
-            } catch (Exception ex) {
-                System.err.println("Error parsing message: " + ex.getMessage());
-            }
-        });
-    }
-
     private void showStatus(String message, Color color) {
         lblStatus.setForeground(color);
         lblStatus.setText(message);
-
-        // Mỗi thông báo có timer riêng, không bị ghi đè
-        Timer timer = new Timer();
-        timer.schedule(new java.util.TimerTask() {
-            @Override
-            public void run() {
-                SwingUtilities.invokeLater(() -> lblStatus.setText(" "));
-            }
+        
+        if (message.startsWith("✅")) {
+            playSound("assets/sounds/correct.mp3");  // đường dẫn tới file âm thanh đúng
+        } else if (message.startsWith("❌")) {
+            playSound("assets/sounds/wrong.mp3");    // đường dẫn tới file âm thanh sai
+        }
+        
+        Timer t = new Timer();
+        t.schedule(new java.util.TimerTask() {
+            public void run() { SwingUtilities.invokeLater(() -> lblStatus.setText(" ")); }
         }, 3000);
     }
 
@@ -235,12 +188,81 @@ public class GameFrame extends JFrame {
             dispose();
         }
     }
-    /** ====================== REMATCH HANDLING ====================== */
+
+    /** ====================== SERVER MESSAGE HANDLING ====================== */
+    private void onServer(String line) {
+        // Keep original logic, just SwingUtilities
+        SwingUtilities.invokeLater(() -> {
+            try {
+                JsonObject obj = JsonParser.parseString(line).getAsJsonObject();
+                String type = obj.get("type").getAsString();
+                JsonObject p = obj.getAsJsonObject("payload");
+
+                switch (type) {
+                    case "timer_tick" -> {
+                        if (!roomId.equals(p.get("roomId").getAsString())) return;
+                        int left = p.get("secLeft").getAsInt();
+                        lblTimer.setText("⏱ " + left + "s");
+                        updateScores(p.getAsJsonObject("scores"));
+                    }
+                    case "score_update" -> {
+                        if (!roomId.equals(p.get("roomId").getAsString())) return;
+                        updateScores(p.getAsJsonObject("scores"));
+                    }
+                    case "word_result" -> {
+                        if (p.has("word") && !p.get("word").getAsString().equalsIgnoreCase(lastSubmittedWord))
+                            return;
+                        boolean ok = p.get("accepted").getAsBoolean();
+                        if (ok) {
+                            wordListModel.addElement(lastSubmittedWord);
+                            lstWords.ensureIndexIsVisible(wordListModel.size() - 1);
+                            showStatus("✅ Valid word: " + lastSubmittedWord, new Color(0, 128, 0));
+                        } else {
+                            showStatus("❌ Invalid word: " + lastSubmittedWord, Color.RED);
+                        }
+                    }
+                    case "game_end" -> {
+                        if (!roomId.equals(p.get("roomId").getAsString())) return;
+                        updateScores(p.getAsJsonObject("scores"));
+                        boolean endedByLeave = p.has("endedByLeave") && p.get("endedByLeave").getAsBoolean();
+                        if (endedByLeave) {
+                            String winner = pickWinner();
+                            
+                            // Phát âm thanh dựa vào kết quả
+                            if (winner.equals(me)) playSound("assets/sounds/win.mp3");
+                            else if (winner.equals("Draw")) playSound("assets/sounds/draw.mp3");
+                            else playSound("assets/sounds/lose.mp3");
+                            
+                            JOptionPane.showMessageDialog(this,
+                                    "🎮 Game Over!\nOpponent Left!\nWinner: " + winner,
+                                    "Game Ended", JOptionPane.INFORMATION_MESSAGE);
+                            new LobbyFrame(net, me);
+                            dispose();
+                        } else {
+                            showRematchDialog();
+                        }
+                    }
+                    case "rematch_offer" -> { if (!rematchDialogShown) showRematchDialog(); }
+                    case "rematch_update", "rematch_cancelled", "rematch_start" -> handleRematchMessage(type, p);
+                }
+            } catch (Exception ex) {
+                System.err.println("Error parsing message: " + ex.getMessage());
+            }
+        });
+    }
+
+    // ===== REMATCH HANDLING =====
     private void showRematchDialog() {
         rematchDialogShown = true;
         updateScoresFromLabels();
 
         String winner = pickWinner();
+        
+        // Phát âm thanh kết thúc game
+        if (winner.equals(me)) playSound("assets/sounds/win.mp3");
+        else if (winner.equals("Draw")) playSound("assets/sounds/draw.mp3");
+        else playSound("assets/sounds/lose.mp3");
+        
         rematchDialog = new JDialog(this, "Game End!", true);
         rematchDialog.setLayout(new BorderLayout(10, 10));
         rematchDialog.setSize(320, 220);
@@ -384,5 +406,16 @@ public class GameFrame extends JFrame {
             scoreOp = Integer.parseInt(lblScore2.getText().replaceAll("\\D", ""));
         } catch (Exception ignore) {}
     }
-
+    
+    /** Phát âm thanh khi submit từ */
+    private void playSound(String path) {
+        new Thread(() -> {
+            try (FileInputStream fis = new FileInputStream(path)) {
+                Player player = new Player(fis);
+                player.play();
+            } catch (Exception e) {
+                System.err.println("MP3 play error: " + e.getMessage());
+            }
+        }).start();
+    }
 }
