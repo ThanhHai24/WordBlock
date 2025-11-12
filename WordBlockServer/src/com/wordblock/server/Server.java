@@ -3,6 +3,7 @@ package com.wordblock.server;
 import com.google.gson.*;
 import com.wordblock.dao.*;
 import com.wordblock.game.*;
+import com.wordblock.model.User;
 import java.io.IOException;
 import java.net.ServerSocket;
 import java.net.Socket;
@@ -46,20 +47,39 @@ public class Server {
     try {
         // Duyệt qua tất cả người đang online
         var users = online.entrySet().stream()
-            .map(e -> Map.of(
-                "name", e.getKey(),
-                "status", (userRoom.containsKey(e.getKey()) ? "Playing" : "Online")
-            ))
-            .toList();
+            .map(e -> {
+                String username = e.getKey();
+                String status = userRoom.containsKey(username) ? "Playing" : "Online";
 
+                int points = 0;
+                try {
+                    User u = userDAO.findByUsername(username);
+                    if (u != null) points = u.getTotalPoints();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+
+                return Map.of(
+                    "name", username,
+                    "status", status,
+                    "points", points
+                );
+            })
+            .toList();
+        
         // Gói JSON gửi đi
         String json = gson.toJson(Map.of(
             "type", "online_list",
             "payload", Map.of("users", users)
         ));
+        
+        System.out.println(json);
 
         // Gửi cho tất cả client đang online
-        online.values().forEach(h -> h.sendRaw(json));
+        online.values().forEach(h -> {
+            h.sendRaw(json);
+            System.out.println(h);
+        });
     } catch (Exception e) {
         e.printStackTrace();
     }
